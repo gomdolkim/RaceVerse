@@ -13,7 +13,9 @@ as $$
   select rwe.*
   from public.race_with_next_edition rwe
   join public.locations l on l.id = rwe.location_id
-  where l.geo_point is not null
+  where rwe.primary_type <> 'unknown'
+    and rwe.event_date is not null
+    and l.geo_point is not null
     and ST_DWithin(
       l.geo_point,
       ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography,

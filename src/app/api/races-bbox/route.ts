@@ -23,7 +23,9 @@ export async function GET(req: Request) {
   } as any);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const rows = (data ?? []) as RaceWithNextEdition[];
+  const rows = ((data ?? []) as RaceWithNextEdition[]).filter(
+    (r) => r.primary_type !== "unknown" && r.event_date != null,
+  );
   return NextResponse.json(
     {
       data: rows.map((r) => ({

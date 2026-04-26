@@ -13,11 +13,13 @@ stable
 as $$
   select rwe.*
   from public.race_with_next_edition rwe
-  where rwe.longitude is not null
+  where rwe.primary_type <> 'unknown'
+    and rwe.event_date is not null
+    and rwe.longitude is not null
     and rwe.latitude  is not null
     and rwe.longitude between west and east
     and rwe.latitude  between south and north
-  order by rwe.event_date asc nulls last
+  order by rwe.event_date asc
   limit limit_count;
 $$;
 

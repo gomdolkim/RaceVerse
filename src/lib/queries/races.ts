@@ -17,9 +17,11 @@ export interface RaceFilters {
 
 const RWE_SELECT = "*";
 
-/** Filter "unknown" primary_type races out of any list — they pollute discovery. */
-function dropUnknown<T extends { primary_type: string }>(rows: T[]): T[] {
-  return rows.filter((r) => r.primary_type !== "unknown");
+/** Filter discovery-noise rows: uncategorized type or no scheduled date. */
+function dropHidden<T extends { primary_type: string; event_date?: string | null }>(
+  rows: T[],
+): T[] {
+  return rows.filter((r) => r.primary_type !== "unknown" && r.event_date != null);
 }
 
 export async function listRaces(filters: RaceFilters = {}): Promise<{
@@ -47,7 +49,7 @@ export async function listRaces(filters: RaceFilters = {}): Promise<{
       offset_count: offset,
     } as any);
     if (error) throw error;
-    const rows = dropUnknown((data ?? []) as RaceWithNextEdition[]);
+    const rows = dropHidden((data ?? []) as RaceWithNextEdition[]);
     return { data: rows, count: rows.length };
   }
 
@@ -55,6 +57,7 @@ export async function listRaces(filters: RaceFilters = {}): Promise<{
     .from("race_with_next_edition")
     .select(RWE_SELECT, { count: "exact" })
     .neq("primary_type", "unknown")
+    .not("event_date", "is", null)
     .order("event_date", { ascending: true, nullsFirst: false })
     .range(offset, offset + limit - 1);
 
@@ -113,6 +116,7 @@ export async function getRecentlyAdded(limit = 8): Promise<RaceWithNextEdition[]
     .from("race_with_next_edition")
     .select(RWE_SELECT)
     .neq("primary_type", "unknown")
+    .not("event_date", "is", null)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
