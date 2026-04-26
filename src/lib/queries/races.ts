@@ -150,6 +150,74 @@ export async function getRelatedRaces(race: RacePublic, limit = 6): Promise<Race
   return (data ?? []) as RaceWithNextEdition[];
 }
 
+const CALENDAR_SELECT =
+  "id, slug, canonical_name, country_code, country_name, city, event_date, primary_type, registration_url";
+
+/**
+ * Fetch races for a single calendar month — `YYYY-MM`.
+ * One month is well under PostgREST limits, so a single call suffices.
+ */
+export async function listRacesForMonth(month: string): Promise<RaceWithNextEdition[]> {
+  const m = /^(\d{4})-(\d{2})$/.exec(month);
+  if (!m) return [];
+  const year = Number(m[1]);
+  const monthIdx = Number(m[2]) - 1;
+  const start = `${month}-01`;
+  const lastDay = new Date(year, monthIdx + 1, 0).getDate();
+  const end = `${month}-${String(lastDay).padStart(2, "0")}`;
+
+  const supabase = await createSupabaseServer();
+  const { data, error } = await supabase
+    .from("race_with_next_edition")
+    .select(CALENDAR_SELECT)
+    .neq("primary_type", "unknown")
+    .gte("event_date", start)
+    .lte("event_date", end)
+    .order("event_date", { ascending: true })
+    .limit(2000);
+  if (error) throw error;
+  return (data ?? []) as RaceWithNextEdition[];
+}
+
+/**
+ * Find the YYYY-MM of the earliest upcoming race ≥ today.
+ * Used to redirect the user when they land on /calendar without a month
+ * param, so they immediately see a month with content.
+ */
+export async function getEarliestUpcomingMonth(): Promise<string | null> {
+  const supabase = await createSupabaseServer();
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("race_with_next_edition")
+    .select("event_date")
+    .neq("primary_type", "unknown")
+    .gte("event_date", today)
+    .order("event_date", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data?.event_date) return null;
+  return (data.event_date as string).slice(0, 7);
+}
+
+/**
+ * Find the YYYY-MM of the latest scheduled race we know about.
+ * Used to disable the "next month" button at the boundary.
+ */
+export async function getLatestUpcomingMonth(): Promise<string | null> {
+  const supabase = await createSupabaseServer();
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("race_with_next_edition")
+    .select("event_date")
+    .neq("primary_type", "unknown")
+    .gte("event_date", today)
+    .order("event_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error || !data?.event_date) return null;
+  return (data.event_date as string).slice(0, 7);
+}
+
 export async function getDatasetCounts(): Promise<{
   races: number;
   geocoded: number;

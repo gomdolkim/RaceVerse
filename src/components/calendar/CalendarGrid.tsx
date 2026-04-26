@@ -17,12 +17,24 @@ import { countryName } from "@/lib/format/country";
 import { formatEventDate } from "@/lib/format/date";
 import { Link } from "@/lib/i18n/routing";
 import { writePrefsToDocument } from "@/lib/prefs/filter-prefs";
-import type { CountryStats, PrimaryType, RaceWithNextEdition } from "@/lib/supabase/types";
+import type {
+  CountryStats,
+  PrimaryType,
+  RaceWithNextEdition,
+} from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { ArrowRight, ChevronLeft, ChevronRight, HelpCircle, Sparkles, X } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  HelpCircle,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 
 const TYPE_BADGE: Record<PrimaryType, string> = {
   road_marathon: "bg-orange-500/15 text-orange-300 ring-orange-500/30",
@@ -50,15 +62,39 @@ const MONTH_NAMES_EN = [
 ];
 
 interface Props {
+  /** Current month: 'YYYY-MM' */
+  month: string;
+  /** 'YYYY-MM' for prev navigation */
+  prevMonth: string;
+  /** 'YYYY-MM' for next navigation */
+  nextMonth: string;
+  /** First month with any upcoming race in DB (server-computed) */
+  earliestMonth: string | null;
+  /** Last month with any upcoming race in DB (server-computed) */
+  latestMonth: string | null;
+  /** Races for `month` only (already date-filtered by server) */
   races: RaceWithNextEdition[];
   availableCountries: CountryStats[];
   initialSelectedCountries?: string[];
 }
 
-export function CalendarGrid({ races, availableCountries, initialSelectedCountries = [] }: Props) {
+export function CalendarGrid({
+  month,
+  prevMonth,
+  nextMonth,
+  earliestMonth,
+  latestMonth,
+  races,
+  availableCountries,
+  initialSelectedCountries = [],
+}: Props) {
   const t = useTranslations("calendar");
   const tRaces = useTranslations("races");
   const locale = useLocale();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [pending, startTransition] = useTransition();
+
   const weekdays = (t.raw("weekdays") as string[]) ?? [
     "Sun",
     "Mon",
@@ -69,18 +105,10 @@ export function CalendarGrid({ races, availableCountries, initialSelectedCountri
     "Sat",
   ];
 
-  const [cursor, setCursor] = useState(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1);
-  });
-
   const [selectedCountries, setSelectedCountries] = useState<string[]>(initialSelectedCountries);
-
-  // Day-detail dialog state — opens when user clicks a day cell with races.
   const [dialogDay, setDialogDay] = useState<string | null>(null);
 
-  // Persist country selection to cookie so it survives browser restart
-  // and syncs with /races filters.
+  // Persist country selection (cookie syncs with /races)
   // biome-ignore lint/correctness/useExhaustiveDependencies: derived join covers deps
   useEffect(() => {
     writePrefsToDocument({
@@ -88,69 +116,32 @@ export function CalendarGrid({ races, availableCountries, initialSelectedCountri
     });
   }, [selectedCountries.join(",")]);
 
-  // Apply country filter BEFORE building the month grid.
-  const filteredRaces = useMemo(() => {
-    if (selectedCountries.length === 0) return races;
-    const set = new Set(selectedCountries.map((c) => c.toUpperCase()));
-    return races.filter((r) => r.country_code && set.has(r.country_code.toUpperCase()));
-  }, [races, selectedCountries]);
-
-  // Earliest upcoming race month (within filteredRaces).
-  const firstRaceMonth = useMemo(() => {
-    let earliest: Date | null = null;
-    for (const r of filteredRaces) {
-      if (!r.event_date) continue;
-      const d = new Date(r.event_date);
-      if (!earliest || d < earliest) earliest = d;
-    }
-    return earliest ? new Date(earliest.getFullYear(), earliest.getMonth(), 1) : null;
-  }, [filteredRaces]);
-
-  // When user changes the country filter, jump cursor forward to the first
-  // month that actually has races. This avoids the "calendar looks empty"
-  // confusion (e.g., user picks Thailand but cursor sits on July when the
-  // earliest Thai race is in May).
-  const lastFilterKeyRef = useRef("");
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional: react to filter change
-  useEffect(() => {
-    const key = selectedCountries.join(",");
-    if (key === lastFilterKeyRef.current) return;
-    lastFilterKeyRef.current = key;
-    if (!firstRaceMonth) return;
-    setCursor((prev) => {
-      // Only jump when current month has zero matching races.
-      const cursorMonth = prev.getFullYear() * 12 + prev.getMonth();
-      const firstMonth = firstRaceMonth.getFullYear() * 12 + firstRaceMonth.getMonth();
-      if (cursorMonth >= firstMonth) {
-        // Check whether current month actually has results — if not, jump forward.
-        const has = filteredRaces.some((r) => {
-          if (!r.event_date) return false;
-          const d = new Date(r.event_date);
-          return d.getFullYear() === prev.getFullYear() && d.getMonth() === prev.getMonth();
+  // Apply country filter to the month's races (client-side)
+  const filteredRaces =
+    selectedCountries.length === 0
+      ? races
+      : races.filter((r) => {
+          if (!r.country_code) return false;
+          const set = new Set(selectedCountries.map((c) => c.toUpperCase()));
+          return set.has(r.country_code.toUpperCase());
         });
-        if (has) return prev;
-      }
-      return firstRaceMonth;
-    });
-  }, [selectedCountries.join(","), firstRaceMonth]);
 
-  const monthRaces = useMemo(() => {
+  // Build day → races map and grid cells from cursor month
+  const [year, monthIdx] = month.split("-").map(Number);
+  const cursor = new Date(year, monthIdx - 1, 1);
+
+  const monthRaces = (() => {
     const map = new Map<string, RaceWithNextEdition[]>();
-    const start = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-    const end = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
     for (const r of filteredRaces) {
       if (!r.event_date) continue;
-      const d = new Date(r.event_date);
-      if (d < start || d > end) continue;
-      const key = r.event_date;
-      const list = map.get(key) ?? [];
+      const list = map.get(r.event_date) ?? [];
       list.push(r);
-      map.set(key, list);
+      map.set(r.event_date, list);
     }
     return map;
-  }, [cursor, filteredRaces]);
+  })();
 
-  const days = useMemo(() => {
+  const days = (() => {
     const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
     const last = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
     const start = new Date(first);
@@ -166,11 +157,7 @@ export function CalendarGrid({ races, availableCountries, initialSelectedCountri
       if (cells.length > 42) break;
     }
     return cells;
-  }, [cursor]);
-
-  function shift(delta: number) {
-    setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1));
-  }
+  })();
 
   const monthLabel =
     locale === "en"
@@ -183,6 +170,25 @@ export function CalendarGrid({ races, availableCountries, initialSelectedCountri
           month: cursor.getMonth() + 1,
         });
 
+  /** Navigate to a different month via URL (?month=YYYY-MM) */
+  const goToMonth = (targetMonth: string) => {
+    const sp = new URLSearchParams(searchParams);
+    sp.set("month", targetMonth);
+    startTransition(() => {
+      router.replace(`?${sp.toString()}`, { scroll: false });
+    });
+  };
+
+  const goPrev = () => goToMonth(prevMonth);
+  const goNext = () => goToMonth(nextMonth);
+  const goToday = () => {
+    const d = new Date();
+    goToMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+  };
+
+  const canGoPrev = !earliestMonth || month > earliestMonth;
+  const canGoNext = !latestMonth || month < latestMonth;
+
   const toggleCountry = (code: string) => {
     setSelectedCountries((prev) =>
       prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
@@ -190,19 +196,12 @@ export function CalendarGrid({ races, availableCountries, initialSelectedCountri
   };
 
   const totalCount = filteredRaces.length;
-
-  // Are there any races in the currently displayed month?
   const monthHasRaces = monthRaces.size > 0;
 
-  // For the "jump to first" hint when current month is empty.
-  const firstRaceMonthLabel = firstRaceMonth
-    ? locale === "en"
-      ? `${MONTH_NAMES_EN[firstRaceMonth.getMonth()]} ${firstRaceMonth.getFullYear()}`
-      : `${firstRaceMonth.getFullYear()}년 ${firstRaceMonth.getMonth() + 1}월`
-    : null;
+  const earliestLabel = earliestMonth ? formatMonthLabel(earliestMonth, locale) : null;
 
   return (
-    <div>
+    <div className={cn(pending && "opacity-90 transition-opacity")}>
       {/* Country filter row */}
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <CountryPicker
@@ -212,7 +211,6 @@ export function CalendarGrid({ races, availableCountries, initialSelectedCountri
           onClear={() => setSelectedCountries([])}
         />
 
-        {/* Inline help — short on mobile, fuller on desktop, tooltip for both */}
         <Tooltip>
           <TooltipTrigger asChild>
             <span
@@ -260,24 +258,24 @@ export function CalendarGrid({ races, availableCountries, initialSelectedCountri
         </span>
       </div>
 
-      {/* Empty-month hint with jump-to-first action */}
-      {!monthHasRaces && firstRaceMonth && (
+      {/* Empty-month hint */}
+      {!monthHasRaces && earliestMonth && earliestMonth !== month && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-border bg-surface/40 px-4 py-3 text-sm">
           <Sparkles className="size-4 text-accent" />
           <span className="text-fg-muted">{t("no_races_in_month")}</span>
           <Button
             size="sm"
             variant="outline"
-            onClick={() => setCursor(firstRaceMonth)}
+            onClick={() => goToMonth(earliestMonth)}
             className="ml-auto"
           >
-            {t("jump_to_next", { month: firstRaceMonthLabel ?? "" })}
+            {t("jump_to_next", { month: earliestLabel ?? "" })}
           </Button>
         </div>
       )}
 
       <motion.div
-        key={cursor.toISOString()}
+        key={month}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
@@ -288,24 +286,20 @@ export function CalendarGrid({ races, availableCountries, initialSelectedCountri
             <Button
               size="icon"
               variant="outline"
-              onClick={() => shift(-1)}
+              onClick={goPrev}
+              disabled={!canGoPrev || pending}
               aria-label={t("prev_month")}
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                setCursor(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
-              }
-            >
+            <Button size="sm" variant="outline" onClick={goToday} disabled={pending}>
               {t("today")}
             </Button>
             <Button
               size="icon"
               variant="outline"
-              onClick={() => shift(1)}
+              onClick={goNext}
+              disabled={!canGoNext || pending}
               aria-label={t("next_month")}
             >
               <ChevronRight className="size-4" />
@@ -341,7 +335,6 @@ export function CalendarGrid({ races, availableCountries, initialSelectedCountri
                 tabIndex={hasRaces ? 0 : undefined}
                 aria-label={hasRaces ? t("open_day_view", { n: dayRaces.length }) : undefined}
                 className={cn(
-                  // taller min-height than before to give more touch room
                   "relative flex min-h-[68px] flex-col p-2 sm:min-h-[96px] sm:p-3 transition-colors",
                   cell.inMonth ? "bg-surface-raised" : "bg-surface text-fg-subtle/50",
                   isToday(cell.date) && "ring-1 ring-inset ring-accent",
@@ -371,7 +364,6 @@ export function CalendarGrid({ races, availableCountries, initialSelectedCountri
                     <span className="hidden sm:block text-[10px] uppercase tracking-wider text-fg-muted">
                       {locale === "en" ? (dayRaces.length === 1 ? "race" : "races") : "대회"}
                     </span>
-                    {/* Up to 4 country flags as a soft visual hint */}
                     <div className="flex items-center gap-0.5">
                       {uniqueFlags(dayRaces, 4).map((c) => (
                         <CountryFlag key={c} code={c} size={11} />
@@ -390,7 +382,7 @@ export function CalendarGrid({ races, availableCountries, initialSelectedCountri
         </div>
       </motion.div>
 
-      {/* Day detail dialog — shows ALL races for the clicked day */}
+      {/* Day detail dialog */}
       <Dialog open={dialogDay !== null} onOpenChange={(open) => !open && setDialogDay(null)}>
         <DialogContent className="max-w-2xl p-0 sm:rounded-2xl">
           {dialogDay && (
@@ -484,6 +476,15 @@ function isoDate(d: Date): string {
   ).padStart(2, "0")}`;
 }
 
+function isToday(d: Date): boolean {
+  const t = new Date();
+  return (
+    d.getFullYear() === t.getFullYear() &&
+    d.getMonth() === t.getMonth() &&
+    d.getDate() === t.getDate()
+  );
+}
+
 function uniqueCountries(races: RaceWithNextEdition[]): number {
   const set = new Set<string>();
   for (const r of races) if (r.country_code) set.add(r.country_code);
@@ -502,11 +503,8 @@ function uniqueFlags(races: RaceWithNextEdition[], take: number): string[] {
   return out;
 }
 
-function isToday(d: Date): boolean {
-  const t = new Date();
-  return (
-    d.getFullYear() === t.getFullYear() &&
-    d.getMonth() === t.getMonth() &&
-    d.getDate() === t.getDate()
-  );
+function formatMonthLabel(month: string, locale: string): string {
+  const [y, m] = month.split("-").map(Number);
+  if (locale === "en") return `${MONTH_NAMES_EN[m - 1]} ${y}`;
+  return `${y}년 ${m}월`;
 }
