@@ -13,7 +13,7 @@ stable
 as $$
   select rwe.*
   from public.race_with_next_edition rwe
-  where rwe.primary_type <> 'unknown'
+  where rwe.primary_type not in ('unknown', 'road_other')
     and rwe.event_date is not null
     and rwe.longitude is not null
     and rwe.latitude  is not null

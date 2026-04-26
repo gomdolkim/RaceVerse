@@ -17,11 +17,16 @@ export interface RaceFilters {
 
 const RWE_SELECT = "*";
 
-/** Filter discovery-noise rows: uncategorized type or no scheduled date. */
+/** Types that should never surface in discovery surfaces (lists/charts/map). */
+export const HIDDEN_PRIMARY_TYPES = ["unknown", "road_other"] as const;
+const HIDDEN_TYPES_PG = `(${HIDDEN_PRIMARY_TYPES.join(",")})`;
+
+/** Filter discovery-noise rows: hidden type or no scheduled date. */
 function dropHidden<T extends { primary_type: string; event_date?: string | null }>(
   rows: T[],
 ): T[] {
-  return rows.filter((r) => r.primary_type !== "unknown" && r.event_date != null);
+  const hidden = new Set<string>(HIDDEN_PRIMARY_TYPES);
+  return rows.filter((r) => !hidden.has(r.primary_type) && r.event_date != null);
 }
 
 export async function listRaces(filters: RaceFilters = {}): Promise<{
@@ -56,7 +61,7 @@ export async function listRaces(filters: RaceFilters = {}): Promise<{
   let q = supabase
     .from("race_with_next_edition")
     .select(RWE_SELECT, { count: "exact" })
-    .neq("primary_type", "unknown")
+    .not("primary_type", "in", HIDDEN_TYPES_PG)
     .not("event_date", "is", null)
     .order("event_date", { ascending: true, nullsFirst: false })
     .range(offset, offset + limit - 1);
@@ -115,7 +120,7 @@ export async function getRecentlyAdded(limit = 8): Promise<RaceWithNextEdition[]
   const { data, error } = await supabase
     .from("race_with_next_edition")
     .select(RWE_SELECT)
-    .neq("primary_type", "unknown")
+    .not("primary_type", "in", HIDDEN_TYPES_PG)
     .not("event_date", "is", null)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -140,8 +145,8 @@ export async function getTrailRaces(limit = 8): Promise<RaceWithNextEdition[]> {
 export async function getRelatedRaces(race: RacePublic, limit = 6): Promise<RaceWithNextEdition[]> {
   const supabase = await createSupabaseServer();
   const today = new Date().toISOString().slice(0, 10);
-  // If the parent race itself is uncategorized, skip related-race recommendations.
-  if (race.primary_type === "unknown") return [];
+  // If the parent race is one of the hidden types, skip related-race surface.
+  if ((HIDDEN_PRIMARY_TYPES as readonly string[]).includes(race.primary_type)) return [];
   const { data, error } = await supabase
     .from("race_with_next_edition")
     .select(RWE_SELECT)
@@ -174,7 +179,7 @@ export async function listRacesForMonth(month: string): Promise<RaceWithNextEdit
   const { data, error } = await supabase
     .from("race_with_next_edition")
     .select(CALENDAR_SELECT)
-    .neq("primary_type", "unknown")
+    .not("primary_type", "in", HIDDEN_TYPES_PG)
     .gte("event_date", start)
     .lte("event_date", end)
     .order("event_date", { ascending: true })
@@ -194,7 +199,7 @@ export async function getEarliestUpcomingMonth(): Promise<string | null> {
   const { data, error } = await supabase
     .from("race_with_next_edition")
     .select("event_date")
-    .neq("primary_type", "unknown")
+    .not("primary_type", "in", HIDDEN_TYPES_PG)
     .gte("event_date", today)
     .order("event_date", { ascending: true })
     .limit(1)
@@ -213,7 +218,7 @@ export async function getLatestUpcomingMonth(): Promise<string | null> {
   const { data, error } = await supabase
     .from("race_with_next_edition")
     .select("event_date")
-    .neq("primary_type", "unknown")
+    .not("primary_type", "in", HIDDEN_TYPES_PG)
     .gte("event_date", today)
     .order("event_date", { ascending: false })
     .limit(1)
@@ -233,17 +238,17 @@ export async function getDatasetCounts(): Promise<{
     supabase
       .from("races_public")
       .select("id", { count: "exact", head: true })
-      .neq("primary_type", "unknown"),
+      .not("primary_type", "in", HIDDEN_TYPES_PG),
     supabase
       .from("races_public")
       .select("id", { count: "exact", head: true })
-      .neq("primary_type", "unknown")
+      .not("primary_type", "in", HIDDEN_TYPES_PG)
       .not("latitude", "is", null),
     supabase.from("country_stats").select("country_code", { count: "exact", head: true }),
     supabase
       .from("race_with_next_edition")
       .select("id", { count: "exact", head: true })
-      .neq("primary_type", "unknown")
+      .not("primary_type", "in", HIDDEN_TYPES_PG)
       .not("registration_url", "is", null),
   ]);
   return {

@@ -35,7 +35,7 @@ export async function getRacesByCountry(
     .from("race_with_next_edition")
     .select("*")
     .eq("country_code", code.toUpperCase())
-    .neq("primary_type", "unknown")
+    .not("primary_type", "in", "(unknown,road_other)")
     .not("event_date", "is", null)
     .order("event_date", { ascending: true, nullsFirst: false })
     .range(offset, offset + limit - 1);

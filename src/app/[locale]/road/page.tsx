@@ -19,7 +19,7 @@ export default async function RoadPage({ params }: PageProps) {
 
   let races: Awaited<ReturnType<typeof listRaces>> = { data: [], count: 0 };
   try {
-    races = await listRaces({ types: ["road_marathon", "road_other"], limit: 48 });
+    races = await listRaces({ types: ["road_marathon"], limit: 48 });
   } catch {
     /* ignore */
   }

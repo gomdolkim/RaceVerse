@@ -22,14 +22,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { CountryPicker } from "./CountryPicker";
 
-const PRIMARY_TYPES: PrimaryType[] = [
-  "road_marathon",
-  "road_other",
-  "trail",
-  "ultra",
-  "mixed",
-  "virtual",
-];
+const PRIMARY_TYPES: PrimaryType[] = ["road_marathon", "trail", "ultra", "mixed", "virtual"];
 
 export function FilterBar({ availableCountries }: { availableCountries: CountryStats[] }) {
   const router = useRouter();
@@ -161,11 +154,7 @@ export function FilterBar({ availableCountries }: { availableCountries: CountryS
         {/* Mobile filter sheet — staged selection + apply button */}
         <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
-            <Button
-              variant="outline"
-              className="lg:hidden gap-1.5"
-              aria-label={t("filter_open")}
-            >
+            <Button variant="outline" className="lg:hidden gap-1.5" aria-label={t("filter_open")}>
               <SlidersHorizontal className="size-4" />
               {activeCount > 0 && (
                 <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[10px] tabular text-accent">

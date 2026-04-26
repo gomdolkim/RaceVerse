@@ -13,7 +13,7 @@ as $$
   select rwe.*
   from public.race_with_next_edition rwe
   join public.locations l on l.id = rwe.location_id
-  where rwe.primary_type <> 'unknown'
+  where rwe.primary_type not in ('unknown', 'road_other')
     and rwe.event_date is not null
     and l.geo_point is not null
     and ST_DWithin(

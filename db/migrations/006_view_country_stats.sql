@@ -1,6 +1,6 @@
 -- RaceVerse: aggregated country stats for /countries and /insights
--- "unknown" primary_type races are excluded from counts so the country grid
--- only surfaces actionable data.
+-- "unknown" and "road_other" primary_type races are excluded from counts so
+-- the country grid only surfaces actionable data.
 
 create or replace view public.country_stats as
 select
@@ -13,7 +13,7 @@ select
 from public.races_public rp
 where rp.country_code is not null
   and rp.is_active = true
-  and rp.primary_type <> 'unknown'
+  and rp.primary_type not in ('unknown', 'road_other')
 group by rp.country_code, rp.country_name
 having count(distinct rp.id) > 0;
 
