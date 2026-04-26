@@ -23,6 +23,7 @@ export async function getMonthlyDistribution(): Promise<MonthlyDistribution[]> {
   const { data, error } = await supabase
     .from("race_with_next_edition")
     .select("event_date")
+    .neq("primary_type", "unknown")
     .gte("event_date", start)
     .order("event_date", { ascending: true })
     .limit(5000);
@@ -42,10 +43,12 @@ export async function getTypeDistribution(): Promise<TypeDistribution[]> {
     .from("races_public")
     .select("primary_type")
     .eq("is_active", true)
+    .neq("primary_type", "unknown")
     .limit(10000);
   if (error) throw error;
   const counts = new Map<string, number>();
   for (const row of data ?? []) {
+    if (row.primary_type === "unknown") continue;
     counts.set(row.primary_type, (counts.get(row.primary_type) ?? 0) + 1);
   }
   return [...counts.entries()]
