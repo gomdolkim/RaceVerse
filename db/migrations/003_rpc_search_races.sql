@@ -20,7 +20,8 @@ as $$
   select distinct on (rwe.id) rwe.*
   from public.race_with_next_edition rwe
   left join public.race_distances rd on rd.race_edition_id = rwe.edition_id
-  where (countries is null or rwe.country_code = any(countries))
+  where rwe.primary_type <> 'unknown'
+    and (countries is null or rwe.country_code = any(countries))
     and (types is null or rwe.primary_type::text = any(types))
     and (distance_min is null or rd.distance_km >= distance_min)
     and (distance_max is null or rd.distance_km <= distance_max)

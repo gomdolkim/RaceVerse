@@ -17,6 +17,11 @@ export interface RaceFilters {
 
 const RWE_SELECT = "*";
 
+/** Filter "unknown" primary_type races out of any list — they pollute discovery. */
+function dropUnknown<T extends { primary_type: string }>(rows: T[]): T[] {
+  return rows.filter((r) => r.primary_type !== "unknown");
+}
+
 export async function listRaces(filters: RaceFilters = {}): Promise<{
   data: RaceWithNextEdition[];
   count: number;
@@ -28,6 +33,7 @@ export async function listRaces(filters: RaceFilters = {}): Promise<{
   // Use search_races RPC for combined filtering when distance filter is applied,
   // or when full-text search is needed. Otherwise direct view query is faster.
   if (filters.distanceMin !== undefined || filters.distanceMax !== undefined || filters.q) {
+    // biome-ignore lint/suspicious/noExplicitAny: untyped RPC, see lib/supabase/types
     const { data, error } = await supabase.rpc("search_races", {
       countries: filters.countries ?? null,
       types: filters.types ?? null,
@@ -41,13 +47,14 @@ export async function listRaces(filters: RaceFilters = {}): Promise<{
       offset_count: offset,
     } as any);
     if (error) throw error;
-    const rows = (data ?? []) as RaceWithNextEdition[];
+    const rows = dropUnknown((data ?? []) as RaceWithNextEdition[]);
     return { data: rows, count: rows.length };
   }
 
   let q = supabase
     .from("race_with_next_edition")
     .select(RWE_SELECT, { count: "exact" })
+    .neq("primary_type", "unknown")
     .order("event_date", { ascending: true, nullsFirst: false })
     .range(offset, offset + limit - 1);
 
@@ -105,6 +112,7 @@ export async function getRecentlyAdded(limit = 8): Promise<RaceWithNextEdition[]
   const { data, error } = await supabase
     .from("race_with_next_edition")
     .select(RWE_SELECT)
+    .neq("primary_type", "unknown")
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -128,6 +136,8 @@ export async function getTrailRaces(limit = 8): Promise<RaceWithNextEdition[]> {
 export async function getRelatedRaces(race: RacePublic, limit = 6): Promise<RaceWithNextEdition[]> {
   const supabase = await createSupabaseServer();
   const today = new Date().toISOString().slice(0, 10);
+  // If the parent race itself is uncategorized, skip related-race recommendations.
+  if (race.primary_type === "unknown") return [];
   const { data, error } = await supabase
     .from("race_with_next_edition")
     .select(RWE_SELECT)
@@ -148,15 +158,20 @@ export async function getDatasetCounts(): Promise<{
 }> {
   const supabase = await createSupabaseServer();
   const [races, geocoded, countries, registration] = await Promise.all([
-    supabase.from("races_public").select("id", { count: "exact", head: true }),
     supabase
       .from("races_public")
       .select("id", { count: "exact", head: true })
+      .neq("primary_type", "unknown"),
+    supabase
+      .from("races_public")
+      .select("id", { count: "exact", head: true })
+      .neq("primary_type", "unknown")
       .not("latitude", "is", null),
     supabase.from("country_stats").select("country_code", { count: "exact", head: true }),
     supabase
       .from("race_with_next_edition")
       .select("id", { count: "exact", head: true })
+      .neq("primary_type", "unknown")
       .not("registration_url", "is", null),
   ]);
   return {

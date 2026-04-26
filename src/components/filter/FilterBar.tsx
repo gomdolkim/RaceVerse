@@ -28,7 +28,6 @@ const PRIMARY_TYPES: PrimaryType[] = [
   "ultra",
   "mixed",
   "virtual",
-  "unknown",
 ];
 
 export function FilterBar({ availableCountries }: { availableCountries: CountryStats[] }) {
@@ -57,17 +56,14 @@ export function FilterBar({ availableCountries }: { availableCountries: CountryS
 
   const toggleMulti = (key: string, value: string) => {
     const current = (params.get(key) ?? "").split(",").filter(Boolean);
-    const next = current.includes(value)
-      ? current.filter((v) => v !== value)
-      : [...current, value];
+    const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
     update((sp) => {
       if (next.length) sp.set(key, next.join(","));
       else sp.delete(key);
     });
   };
 
-  const setOnlyReg = (v: boolean) =>
-    update((sp) => (v ? sp.set("reg", "1") : sp.delete("reg")));
+  const setOnlyReg = (v: boolean) => update((sp) => (v ? sp.set("reg", "1") : sp.delete("reg")));
 
   const clearAll = () => {
     setQ("");

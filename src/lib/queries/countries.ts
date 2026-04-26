@@ -9,7 +9,9 @@ export async function listCountries(): Promise<CountryStats[]> {
     .select("*")
     .order("race_count", { ascending: false });
   if (error) throw error;
-  return data ?? [];
+  // country_stats may include rows with race_count=0 from inactive/uncategorized
+  // races. Hide those — they're noise on the country grid.
+  return ((data ?? []) as CountryStats[]).filter((c) => (c.race_count ?? 0) > 0);
 }
 
 export async function getCountry(code: string): Promise<CountryStats | null> {
@@ -33,6 +35,7 @@ export async function getRacesByCountry(
     .from("race_with_next_edition")
     .select("*")
     .eq("country_code", code.toUpperCase())
+    .neq("primary_type", "unknown")
     .order("event_date", { ascending: true, nullsFirst: false })
     .range(offset, offset + limit - 1);
   if (error) throw error;
