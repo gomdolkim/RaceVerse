@@ -45,7 +45,16 @@
     "featured_countries_sub": "대회 수 기준 상위",
     "see_all": "전체 보기",
     "race_count": "{count}개 대회",
-    "no_data_yet": "데이터 연결 후 곧 표시됩니다. {var}를 확인하세요."
+    "no_data_yet": "데이터 연결 후 곧 표시됩니다. {var}를 확인하세요.",
+    "interests_empty_title": "관심 국가를 선택하세요",
+    "interests_empty_desc": "좋아하는 국가들을 골라두면 홈에서 그 나라의 대회를 먼저 보여드립니다. 다음에 다시 방문해도 그대로 유지됩니다.",
+    "interests_save": "저장",
+    "interests_skip": "건너뛰기",
+    "interests_cancel": "취소",
+    "interests_title": "관심 국가의 다음 대회",
+    "interests_edit": "수정",
+    "interests_no_races": "선택하신 국가의 다가오는 대회가 아직 없습니다",
+    "interests_see_all": "전체 결과 보기"
   },
   "races": {
     "title": "대회",

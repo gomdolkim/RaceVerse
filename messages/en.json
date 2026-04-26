@@ -45,7 +45,16 @@
     "featured_countries_sub": "By race count",
     "see_all": "See all",
     "race_count": "{count} races",
-    "no_data_yet": "Will appear once connected. Check {var}."
+    "no_data_yet": "Will appear once connected. Check {var}.",
+    "interests_empty_title": "Pick your interest countries",
+    "interests_empty_desc": "Choose your favorite countries and we'll surface their races at the top of home. Remembered next time you visit.",
+    "interests_save": "Save",
+    "interests_skip": "Skip",
+    "interests_cancel": "Cancel",
+    "interests_title": "Upcoming in your countries",
+    "interests_edit": "Edit",
+    "interests_no_races": "No upcoming races yet for your selected countries",
+    "interests_see_all": "View all results"
   },
   "races": {
     "title": "Races",

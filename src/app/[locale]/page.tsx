@@ -1,16 +1,20 @@
 import { CountriesStrip } from "@/components/home/CountriesStrip";
 import { Hero } from "@/components/home/Hero";
+import { InterestsSection } from "@/components/home/InterestsSection";
 import { SectionHeader } from "@/components/home/SectionHeader";
 import { StatsRow } from "@/components/home/StatsRow";
 import { RaceList } from "@/components/race/RaceList";
+import { INTERESTS_COOKIE, parseInterests } from "@/lib/prefs/interests";
 import { listCountries } from "@/lib/queries/countries";
 import {
   getDatasetCounts,
   getRecentlyAdded,
   getTrailRaces,
   getUpcomingMajors,
+  listRaces,
 } from "@/lib/queries/races";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { cookies } from "next/headers";
 
 export const revalidate = 1800; // 30min
 
@@ -32,7 +36,11 @@ export default async function HomePage({ params }: PageProps) {
   setRequestLocale(locale);
   const t = await getTranslations("home");
 
-  const [counts, upcoming, recent, trail, countries] = await Promise.all([
+  const cookieStore = await cookies();
+  const interests = parseInterests(cookieStore.get(INTERESTS_COOKIE)?.value);
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [counts, upcoming, recent, trail, countries, interestsResult] = await Promise.all([
     safe(getDatasetCounts(), {
       races: 5547,
       geocoded: 4185,
@@ -43,6 +51,12 @@ export default async function HomePage({ params }: PageProps) {
     safe(getRecentlyAdded(8), [] as Awaited<ReturnType<typeof getRecentlyAdded>>),
     safe(getTrailRaces(8), [] as Awaited<ReturnType<typeof getTrailRaces>>),
     safe(listCountries(), [] as Awaited<ReturnType<typeof listCountries>>),
+    interests && interests.length > 0
+      ? safe(
+          listRaces({ countries: interests, dateFrom: today, limit: 12 }),
+          { data: [], count: 0 } as Awaited<ReturnType<typeof listRaces>>,
+        )
+      : Promise.resolve({ data: [], count: 0 } as Awaited<ReturnType<typeof listRaces>>),
   ]);
 
   const topCountries = countries.slice(0, 12);
@@ -59,6 +73,12 @@ export default async function HomePage({ params }: PageProps) {
           withRegistration={counts.withRegistration}
         />
       </section>
+
+      <InterestsSection
+        initialInterests={interests}
+        availableCountries={countries}
+        races={interestsResult.data}
+      />
 
       <section className="container-wide mt-16 sm:mt-24">
         <SectionHeader
