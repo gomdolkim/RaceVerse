@@ -2,14 +2,15 @@ import { EmptyState } from "@/components/feedback/EmptyState";
 import { FilterBar } from "@/components/filter/FilterBar";
 import { Pagination } from "@/components/filter/Pagination";
 import { RaceList } from "@/components/race/RaceList";
-import { FILTER_COOKIE, parsePrefs } from "@/lib/prefs/filter-prefs";
+import { FILTER_COOKIE, hasMeaningfulPrefs, parsePrefs } from "@/lib/prefs/filter-prefs";
 import { listCountries } from "@/lib/queries/countries";
 import { listRaces } from "@/lib/queries/races";
-import { isEmpty, parseFilters } from "@/lib/url-state/filters";
+import { isEmpty, parseFilters, serializeFilters } from "@/lib/url-state/filters";
 import { formatNumber } from "@/lib/utils";
 import { Search } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const revalidate = 600;
 
@@ -22,24 +23,31 @@ export default async function RacesPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
   const sp = await searchParams;
-  let filters = parseFilters(sp);
+  const urlFilters = parseFilters(sp);
   const t = await getTranslations("races");
 
-  // Restore from cookie when URL has no filter params.
-  if (isEmpty(filters)) {
+  // When the URL has no filters AND the user has saved prefs (e.g., from
+  // home interests), redirect to a URL that *carries* those filters. This
+  // keeps the URL the single source of truth for the client FilterBar so
+  // its state never disagrees with what the server fetched. Without this,
+  // FilterBar would mount with empty URL state and overwrite the cookie.
+  if (isEmpty(urlFilters)) {
     const cookieStore = await cookies();
     const saved = parsePrefs(cookieStore.get(FILTER_COOKIE)?.value);
-    if (saved) {
-      filters = {
-        ...filters,
+    if (saved && hasMeaningfulPrefs(saved)) {
+      const params = serializeFilters({
         countries: saved.countries,
         types: saved.types,
         onlyWithRegistration: saved.onlyWithRegistration,
         dateFrom: saved.dateFrom,
         dateTo: saved.dateTo,
-      };
+      });
+      const qs = params.toString();
+      if (qs) redirect(`/races?${qs}`);
     }
   }
+
+  const filters = urlFilters;
 
   let data: Awaited<ReturnType<typeof listRaces>> = { data: [], count: 0 };
   let countries: Awaited<ReturnType<typeof listCountries>> = [];

@@ -13,7 +13,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { countryName } from "@/lib/format/country";
-import { writePrefsToDocument } from "@/lib/prefs/filter-prefs";
+import { readPrefsFromDocument, writePrefsToDocument } from "@/lib/prefs/filter-prefs";
 import type { CountryStats, PrimaryType } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { Search, SlidersHorizontal, X } from "lucide-react";
@@ -65,9 +65,13 @@ export function FilterBar({ availableCountries }: { availableCountries: CountryS
   };
 
   // Persist current filter state to cookie whenever URL changes.
+  // Merge with existing prefs so we don't wipe other fields written by
+  // sibling pages (e.g., calendar's type filter, home interests sync).
   // biome-ignore lint/correctness/useExhaustiveDependencies: derived strings cover deps
   useEffect(() => {
+    const existing = readPrefsFromDocument() ?? {};
     writePrefsToDocument({
+      ...existing,
       countries: countries.length ? countries : undefined,
       types: types.length ? (types as PrimaryType[]) : undefined,
       onlyWithRegistration: onlyReg || undefined,

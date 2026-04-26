@@ -16,7 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { countryName } from "@/lib/format/country";
 import { formatEventDate } from "@/lib/format/date";
 import { Link } from "@/lib/i18n/routing";
-import { writePrefsToDocument } from "@/lib/prefs/filter-prefs";
+import { readPrefsFromDocument, writePrefsToDocument } from "@/lib/prefs/filter-prefs";
 import type { CountryStats, PrimaryType, RaceWithNextEdition } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -104,10 +104,13 @@ export function CalendarGrid({
   const [selectedTypes, setSelectedTypes] = useState<string[]>(initialSelectedTypes);
   const [dialogDay, setDialogDay] = useState<string | null>(null);
 
-  // Persist filter selection (cookie syncs with /races)
+  // Persist filter selection (cookie syncs with /races). Merge with existing
+  // prefs so we don't wipe other fields (dateFrom, onlyWithRegistration, ...).
   // biome-ignore lint/correctness/useExhaustiveDependencies: derived joins cover deps
   useEffect(() => {
+    const existing = readPrefsFromDocument() ?? {};
     writePrefsToDocument({
+      ...existing,
       countries: selectedCountries.length ? selectedCountries : undefined,
       types: selectedTypes.length ? (selectedTypes as PrimaryType[]) : undefined,
     });
