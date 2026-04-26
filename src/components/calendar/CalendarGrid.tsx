@@ -208,60 +208,100 @@ export function CalendarGrid({
 
   return (
     <div className={cn(pending && "opacity-90 transition-opacity")}>
-      {/* Country filter row */}
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <CountryPicker
-          available={availableCountries}
-          selected={selectedCountries}
-          onToggle={toggleCountry}
-          onClear={() => setSelectedCountries([])}
-        />
+      {/* Filters: country picker + type chips + active chips + count */}
+      <div className="mb-6 space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <CountryPicker
+            available={availableCountries}
+            selected={selectedCountries}
+            onToggle={toggleCountry}
+            onClear={() => setSelectedCountries([])}
+          />
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span
-              tabIndex={0}
-              className="inline-flex cursor-help items-center gap-1.5 rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-fg-muted hover:border-accent/40 hover:text-fg transition-colors"
-              aria-label={t("filter_help")}
-            >
-              <HelpCircle className="size-3.5" />
-              <span className="hidden md:inline">{t("filter_help_short")}</span>
-              <span className="inline md:hidden">?</span>
-            </span>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-[260px] text-xs leading-relaxed">
-            {t("filter_help")}
-          </TooltipContent>
-        </Tooltip>
+          {/* Type chips — inline, mobile-friendly toggle */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {FILTER_TYPES.map((tt) => {
+              const active = selectedTypes.includes(tt);
+              return (
+                <button
+                  type="button"
+                  key={tt}
+                  onClick={() => toggleType(tt)}
+                  aria-pressed={active}
+                  className={cn(
+                    "rounded-full border px-3 py-1.5 text-xs sm:text-sm transition-colors",
+                    active
+                      ? "border-accent bg-accent/15 text-accent"
+                      : "border-border text-fg-muted hover:border-accent/40 hover:text-fg",
+                  )}
+                >
+                  {tType(tt)}
+                </button>
+              );
+            })}
+          </div>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          {selectedCountries.map((c) => (
-            <Badge
-              key={c}
-              variant="accent"
-              className="cursor-pointer gap-1 pl-2 pr-1"
-              onClick={() => toggleCountry(c)}
-            >
-              <CountryFlag code={c} size={12} />
-              <span>{countryName(c, locale, null)}</span>
-              <X className="size-3" />
-            </Badge>
-          ))}
-          {selectedCountries.length > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span
+                tabIndex={0}
+                className="inline-flex cursor-help items-center gap-1.5 rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-fg-muted hover:border-accent/40 hover:text-fg transition-colors"
+                aria-label={t("filter_help")}
+              >
+                <HelpCircle className="size-3.5" />
+                <span className="hidden md:inline">{t("filter_help_short")}</span>
+                <span className="inline md:hidden">?</span>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[260px] text-xs leading-relaxed">
+              {t("filter_help")}
+            </TooltipContent>
+          </Tooltip>
+
+          <span className="ml-auto text-xs text-fg-subtle tabular">
+            {tRaces("results_count", { count: totalCount })}
+          </span>
+        </div>
+
+        {/* Active chips row (only when something is selected) */}
+        {(selectedCountries.length > 0 || selectedTypes.length > 0) && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {selectedCountries.map((c) => (
+              <Badge
+                key={`c-${c}`}
+                variant="accent"
+                className="cursor-pointer gap-1 pl-2 pr-1"
+                onClick={() => toggleCountry(c)}
+              >
+                <CountryFlag code={c} size={12} />
+                <span>{countryName(c, locale, null)}</span>
+                <X className="size-3" />
+              </Badge>
+            ))}
+            {selectedTypes.map((tt) => (
+              <Badge
+                key={`t-${tt}`}
+                variant="accent"
+                className="cursor-pointer gap-1 pl-2 pr-1"
+                onClick={() => toggleType(tt)}
+              >
+                <span>{tType(tt as PrimaryType)}</span>
+                <X className="size-3" />
+              </Badge>
+            ))}
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setSelectedCountries([])}
-              className="text-xs text-fg-muted"
+              onClick={() => {
+                setSelectedCountries([]);
+                setSelectedTypes([]);
+              }}
+              className="ml-auto text-xs text-fg-muted"
             >
               {tRaces("filter_clear")}
             </Button>
-          )}
-        </div>
-
-        <span className="ml-auto text-xs text-fg-subtle tabular">
-          {tRaces("results_count", { count: totalCount })}
-        </span>
+          </div>
+        )}
       </div>
 
       {/* Empty-month hint */}

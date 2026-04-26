@@ -43,6 +43,7 @@ export default async function CalendarPage({ params, searchParams }: PageProps) 
   const cookieStore = await cookies();
   const saved = parsePrefs(cookieStore.get(FILTER_COOKIE)?.value);
   const initialCountries = saved?.countries ?? [];
+  const initialTypes = saved?.types ?? [];
 
   // Fetch the requested month + horizon probes in parallel.
   let races: Awaited<ReturnType<typeof listRacesForMonth>> = [];
@@ -86,6 +87,7 @@ export default async function CalendarPage({ params, searchParams }: PageProps) 
           races={races}
           availableCountries={countries}
           initialSelectedCountries={initialCountries}
+          initialSelectedTypes={initialTypes}
         />
       )}
     </div>
