@@ -62,6 +62,7 @@
     "filter_only_registration": "Open registration only",
     "filter_clear": "Clear all",
     "filter_open": "Open filters",
+    "filter_apply": "Apply",
     "search_button": "Search",
     "search_placeholder": "Search races, cities, countries",
     "load_more": "Load more",

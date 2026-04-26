@@ -62,6 +62,7 @@
     "filter_only_registration": "등록 가능한 대회만",
     "filter_clear": "전체 초기화",
     "filter_open": "필터 열기",
+    "filter_apply": "적용",
     "search_button": "검색",
     "search_placeholder": "대회·도시·국가 검색",
     "load_more": "더 보기",
