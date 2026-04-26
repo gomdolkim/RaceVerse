@@ -2,12 +2,16 @@ import "server-only";
 import { createSupabaseServer } from "@/lib/supabase/server";
 
 export interface MonthlyDistribution {
-  month: string; // 'YYYY-MM'
+  /** 'YYYY-MM' */
+  month: string;
   count: number;
 }
 
 export interface DistanceBucket {
-  bucket: string;
+  /** Translation key in `insights.bucket_*` */
+  bucketKey: string;
+  /** Display order (low → high) */
+  order: number;
   count: number;
 }
 
@@ -16,75 +20,203 @@ export interface TypeDistribution {
   count: number;
 }
 
-export async function getMonthlyDistribution(): Promise<MonthlyDistribution[]> {
-  const supabase = await createSupabaseServer();
-  const today = new Date();
-  const start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
-  const { data, error } = await supabase
-    .from("race_with_next_edition")
-    .select("event_date")
-    .not("primary_type", "in", "(unknown,road_other)")
-    .gte("event_date", start)
-    .order("event_date", { ascending: true })
-    .limit(5000);
-  if (error) throw error;
-  const counts = new Map<string, number>();
-  for (const row of data ?? []) {
-    if (!row.event_date) continue;
-    const month = row.event_date.slice(0, 7);
-    counts.set(month, (counts.get(month) ?? 0) + 1);
-  }
-  return [...counts.entries()].map(([month, count]) => ({ month, count }));
+export interface CountryAgg {
+  country_code: string;
+  country_name: string | null;
+  race_count: number;
+  marathon_count: number;
+  trail_count: number;
+  geocoded_count: number;
 }
 
+const HIDDEN_TYPES_PG = "(unknown,road_other)";
+const HIDDEN_SET = new Set(["unknown", "road_other"]);
+const PAGE = 1000;
+const HARD_CAP = 20000;
+
+/**
+ * Distribution of next-upcoming-edition event_date by month, across the
+ * ENTIRE dataset (no artificial date or limit cap). Paginated to bypass
+ * PostgREST's per-response cap.
+ */
+export async function getMonthlyDistribution(): Promise<MonthlyDistribution[]> {
+  const supabase = await createSupabaseServer();
+  const counts = new Map<string, number>();
+  let offset = 0;
+  while (offset < HARD_CAP) {
+    const { data, error } = await supabase
+      .from("race_with_next_edition")
+      .select("event_date")
+      .not("primary_type", "in", HIDDEN_TYPES_PG)
+      .not("event_date", "is", null)
+      .order("event_date", { ascending: true })
+      .range(offset, offset + PAGE - 1);
+    if (error) throw error;
+    const batch = data ?? [];
+    for (const row of batch) {
+      const ed = row.event_date as string | null;
+      if (!ed) continue;
+      const month = ed.slice(0, 7);
+      counts.set(month, (counts.get(month) ?? 0) + 1);
+    }
+    if (batch.length < PAGE) break;
+    offset += PAGE;
+  }
+  return [...counts.entries()]
+    .map(([month, count]) => ({ month, count }))
+    .sort((a, b) => a.month.localeCompare(b.month));
+}
+
+/**
+ * Type distribution across all active races (excluding hidden types).
+ * Paginated to avoid PostgREST cap.
+ */
 export async function getTypeDistribution(): Promise<TypeDistribution[]> {
   const supabase = await createSupabaseServer();
-  const HIDDEN = new Set(["unknown", "road_other"]);
-  const { data, error } = await supabase
-    .from("races_public")
-    .select("primary_type")
-    .eq("is_active", true)
-    .not("primary_type", "in", "(unknown,road_other)")
-    .limit(10000);
-  if (error) throw error;
   const counts = new Map<string, number>();
-  for (const row of data ?? []) {
-    if (HIDDEN.has(row.primary_type)) continue;
-    counts.set(row.primary_type, (counts.get(row.primary_type) ?? 0) + 1);
+  let offset = 0;
+  while (offset < HARD_CAP) {
+    const { data, error } = await supabase
+      .from("races_public")
+      .select("primary_type")
+      .eq("is_active", true)
+      .not("primary_type", "in", HIDDEN_TYPES_PG)
+      .range(offset, offset + PAGE - 1);
+    if (error) throw error;
+    const batch = data ?? [];
+    for (const row of batch) {
+      const pt = row.primary_type as string;
+      if (HIDDEN_SET.has(pt)) continue;
+      counts.set(pt, (counts.get(pt) ?? 0) + 1);
+    }
+    if (batch.length < PAGE) break;
+    offset += PAGE;
   }
   return [...counts.entries()]
     .map(([primary_type, count]) => ({ primary_type, count }))
     .sort((a, b) => b.count - a.count);
 }
 
+/**
+ * Distance distribution across all race_distances rows (excluding distances
+ * that belong to hidden-type parent races).
+ *
+ * Buckets are clean, mutually exclusive, sorted ascending — and labeled via
+ * i18n keys so the chart renders properly in both KO and EN.
+ */
+const DISTANCE_BUCKETS: { key: string; min: number; max: number; order: number }[] = [
+  { key: "bucket_under_10k", min: 0, max: 10, order: 0 },
+  { key: "bucket_10_25k", min: 10, max: 25, order: 1 },
+  { key: "bucket_25_50k", min: 25, max: 50, order: 2 },
+  { key: "bucket_50_100k", min: 50, max: 100, order: 3 },
+  { key: "bucket_100k_plus", min: 100, max: Number.POSITIVE_INFINITY, order: 4 },
+];
+
 export async function getDistanceDistribution(): Promise<DistanceBucket[]> {
   const supabase = await createSupabaseServer();
-  const { data, error } = await supabase
-    .from("race_distances")
-    .select("distance_km")
-    .not("distance_km", "is", null)
-    .limit(10000);
-  if (error) throw error;
-  const buckets = new Map<string, number>([
-    ["≤10K", 0],
-    ["10–22K", 0],
-    ["하프", 0],
-    ["풀 마라톤", 0],
-    ["50K", 0],
-    ["80K+", 0],
-    ["울트라 100K+", 0],
-  ]);
-  for (const row of data ?? []) {
-    const km = row.distance_km;
-    if (km === null) continue;
-    let key = "≤10K";
-    if (km > 100) key = "울트라 100K+";
-    else if (km > 60) key = "80K+";
-    else if (km > 42.5) key = "50K";
-    else if (km >= 42 && km <= 42.5) key = "풀 마라톤";
-    else if (km >= 21 && km < 22) key = "하프";
-    else if (km >= 10) key = "10–22K";
-    buckets.set(key, (buckets.get(key) ?? 0) + 1);
+
+  // Step 1: collect IDs of editions whose parent race is visible.
+  const visibleEditionIds = new Set<string>();
+  let offset = 0;
+  while (offset < HARD_CAP) {
+    const { data, error } = await supabase
+      .from("race_with_next_edition")
+      .select("edition_id")
+      .not("primary_type", "in", HIDDEN_TYPES_PG)
+      .not("event_date", "is", null)
+      .range(offset, offset + PAGE - 1);
+    if (error) throw error;
+    const batch = data ?? [];
+    for (const row of batch) {
+      const eid = row.edition_id as string | null;
+      if (eid) visibleEditionIds.add(eid);
+    }
+    if (batch.length < PAGE) break;
+    offset += PAGE;
   }
-  return [...buckets.entries()].map(([bucket, count]) => ({ bucket, count }));
+
+  // Step 2: page through race_distances, count only those from visible editions.
+  const counts = new Map<string, number>();
+  for (const b of DISTANCE_BUCKETS) counts.set(b.key, 0);
+  offset = 0;
+  while (offset < HARD_CAP) {
+    const { data, error } = await supabase
+      .from("race_distances")
+      .select("distance_km, race_edition_id")
+      .not("distance_km", "is", null)
+      .range(offset, offset + PAGE - 1);
+    if (error) throw error;
+    const batch = data ?? [];
+    for (const row of batch) {
+      const km = row.distance_km as number | null;
+      const eid = row.race_edition_id as string | null;
+      if (km == null || km < 0) continue;
+      // Only count distances from visible races. (If the join is empty
+      // because of cross-table state, fall through to count anyway.)
+      if (eid && !visibleEditionIds.has(eid)) continue;
+      const bucket = DISTANCE_BUCKETS.find((b) => km >= b.min && km < b.max);
+      if (bucket) counts.set(bucket.key, (counts.get(bucket.key) ?? 0) + 1);
+    }
+    if (batch.length < PAGE) break;
+    offset += PAGE;
+  }
+
+  return DISTANCE_BUCKETS.map((b) => ({
+    bucketKey: b.key,
+    order: b.order,
+    count: counts.get(b.key) ?? 0,
+  }));
+}
+
+/**
+ * Top countries — aggregated DIRECTLY from races_public so it's correct
+ * regardless of whether `country_stats` view was re-applied to the DB.
+ * Sorted by total race count descending.
+ */
+export async function getTopCountries(limit = 12): Promise<CountryAgg[]> {
+  const supabase = await createSupabaseServer();
+  type Row = {
+    country_code: string | null;
+    country_name: string | null;
+    primary_type: string;
+    latitude: number | null;
+  };
+
+  const aggregates = new Map<string, CountryAgg>();
+  let offset = 0;
+  while (offset < HARD_CAP) {
+    const { data, error } = await supabase
+      .from("races_public")
+      .select("country_code, country_name, primary_type, latitude")
+      .eq("is_active", true)
+      .not("primary_type", "in", HIDDEN_TYPES_PG)
+      .not("country_code", "is", null)
+      .range(offset, offset + PAGE - 1);
+    if (error) throw error;
+    const batch = (data ?? []) as Row[];
+    for (const r of batch) {
+      if (!r.country_code) continue;
+      const code = r.country_code.toUpperCase();
+      const existing = aggregates.get(code) ?? {
+        country_code: code,
+        country_name: r.country_name,
+        race_count: 0,
+        marathon_count: 0,
+        trail_count: 0,
+        geocoded_count: 0,
+      };
+      existing.race_count++;
+      if (r.primary_type === "road_marathon") existing.marathon_count++;
+      if (r.primary_type === "trail" || r.primary_type === "ultra") existing.trail_count++;
+      if (r.latitude != null) existing.geocoded_count++;
+      aggregates.set(code, existing);
+    }
+    if (batch.length < PAGE) break;
+    offset += PAGE;
+  }
+
+  return [...aggregates.values()]
+    .filter((c) => c.race_count > 0)
+    .sort((a, b) => b.race_count - a.race_count)
+    .slice(0, limit);
 }

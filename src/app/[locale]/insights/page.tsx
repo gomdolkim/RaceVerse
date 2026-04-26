@@ -1,10 +1,10 @@
 import { InsightsCharts } from "@/components/charts/InsightsCharts";
 import { CountUp } from "@/components/motion/CountUp";
-import { listCountries } from "@/lib/queries/countries";
 import { getDatasetCounts } from "@/lib/queries/races";
 import {
   getDistanceDistribution,
   getMonthlyDistribution,
+  getTopCountries,
   getTypeDistribution,
 } from "@/lib/queries/stats";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -20,7 +20,7 @@ export default async function InsightsPage({ params }: PageProps) {
   setRequestLocale(locale);
   const t = await getTranslations("insights");
 
-  const [counts, monthly, types, distances, countries] = await Promise.all([
+  const [counts, monthly, types, distances, topCountries] = await Promise.all([
     getDatasetCounts().catch(() => ({
       races: 0,
       geocoded: 0,
@@ -30,7 +30,7 @@ export default async function InsightsPage({ params }: PageProps) {
     getMonthlyDistribution().catch(() => []),
     getTypeDistribution().catch(() => []),
     getDistanceDistribution().catch(() => []),
-    listCountries().catch(() => []),
+    getTopCountries(12).catch(() => []),
   ]);
 
   return (
@@ -51,7 +51,7 @@ export default async function InsightsPage({ params }: PageProps) {
         monthly={monthly}
         types={types}
         distances={distances}
-        topCountries={countries.slice(0, 12)}
+        topCountries={topCountries}
       />
     </div>
   );
