@@ -220,6 +220,24 @@
     "github": "GitHub",
     "rights": "© {year} RaceVerse. All rights reserved."
   },
+  "about": {
+    "title": "Closer to your next challenge",
+    "p1": "RaceVerse is an open catalog that gathers the world's marathon, trail, and ultra races in one place. Data refreshes every 6 hours from trusted sources like worldsmarathons, UTMB World Series, and ITRA.",
+    "p2": "Search by country, distance, date, or registration status. Explore by location on the map, or preview upcoming races on the calendar. Each race page surfaces registration links, per-distance details, ITRA/UTMB points, and elevation.",
+    "sources": "Data sources",
+    "source_wm": "5,200+ global marathons",
+    "source_utmb": "Premium multi-day trail events",
+    "source_itra": "Trail categorization + points",
+    "tech_title": "Tech",
+    "tech_p": "Next.js 15 App Router · Supabase Postgres + PostGIS · MapLibre GL · shadcn/ui · Vercel Edge. The crawler backend lives at "
+  },
+  "legal": {
+    "privacy_title": "Privacy",
+    "privacy_body": "RaceVerse does not collect user account info. For anonymous analytics (Vercel Analytics) we transiently see IP and browser info, stored in a non-identifying form. See Vercel's policy for details.",
+    "terms_title": "Terms",
+    "terms_body": "Race info shown on RaceVerse is curated and aggregated from public sources; accuracy is not guaranteed. Always check the official site before registering. Data is provided for non-commercial use only.",
+    "last_updated": "Last updated: {date}"
+  },
   "404": {
     "title": "Lost the trail",
     "subtitle": "This race may have ended or the URL is incorrect",
