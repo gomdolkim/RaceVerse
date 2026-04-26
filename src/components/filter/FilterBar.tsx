@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
   SheetContent,
@@ -88,6 +89,57 @@ export function FilterBar({ availableCountries }: { availableCountries: CountryS
   };
 
   const hasActive = countries.length > 0 || types.length > 0 || onlyReg;
+  const activeCount = countries.length + types.length + (onlyReg ? 1 : 0);
+
+  // ── Mobile staged filter state ──────────────────────────────────────
+  // The mobile sheet collects selections without committing each tap to
+  // the URL. Apply button commits everything at once, Cancel discards.
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [stagedTypes, setStagedTypes] = useState<string[]>(types);
+  const [stagedCountries, setStagedCountries] = useState<string[]>(countries);
+  const [stagedOnlyReg, setStagedOnlyReg] = useState<boolean>(onlyReg);
+
+  // Re-seed staging from URL each time the sheet opens.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional snapshot at open
+  useEffect(() => {
+    if (sheetOpen) {
+      setStagedTypes(types);
+      setStagedCountries(countries);
+      setStagedOnlyReg(onlyReg);
+    }
+  }, [sheetOpen]);
+
+  const stagedToggle = (key: string, value: string) => {
+    if (key === "type") {
+      setStagedTypes((prev) =>
+        prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+      );
+    } else if (key === "country") {
+      setStagedCountries((prev) =>
+        prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+      );
+    }
+  };
+
+  const clearStaged = () => {
+    setStagedTypes([]);
+    setStagedCountries([]);
+    setStagedOnlyReg(false);
+  };
+
+  const applyStaged = () => {
+    update((sp) => {
+      if (stagedCountries.length) sp.set("country", stagedCountries.join(","));
+      else sp.delete("country");
+      if (stagedTypes.length) sp.set("type", stagedTypes.join(","));
+      else sp.delete("type");
+      if (stagedOnlyReg) sp.set("reg", "1");
+      else sp.delete("reg");
+    });
+    setSheetOpen(false);
+  };
+
+  const stagedCount = stagedCountries.length + stagedTypes.length + (stagedOnlyReg ? 1 : 0);
 
   return (
     <div className="space-y-4">
@@ -105,31 +157,60 @@ export function FilterBar({ availableCountries }: { availableCountries: CountryS
         <Button type="submit" disabled={pending}>
           {t("search_button")}
         </Button>
-        <Sheet>
+
+        {/* Mobile filter sheet — staged selection + apply button */}
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" className="lg:hidden" aria-label={t("filter_open")}>
+            <Button
+              variant="outline"
+              className="lg:hidden gap-1.5"
+              aria-label={t("filter_open")}
+            >
               <SlidersHorizontal className="size-4" />
+              {activeCount > 0 && (
+                <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[10px] tabular text-accent">
+                  {activeCount}
+                </span>
+              )}
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
-            <SheetHeader>
+          <SheetContent side="bottom" className="flex h-[90vh] flex-col rounded-t-2xl p-0">
+            <SheetHeader className="border-b border-border p-4">
               <SheetTitle>{t("filter_open")}</SheetTitle>
               <SheetDescription>{t("subtitle")}</SheetDescription>
             </SheetHeader>
-            <div className="px-6 pb-6 space-y-6">
-              <FilterGroups
-                types={types}
-                countries={countries}
-                onlyReg={onlyReg}
-                availableCountries={availableCountries}
-                onToggle={toggleMulti}
-                onClearCountries={() =>
-                  update((sp) => {
-                    sp.delete("country");
-                  })
-                }
-                onSetOnlyReg={setOnlyReg}
-              />
+            <ScrollArea className="flex-1">
+              <div className="space-y-6 p-4 pb-6">
+                <FilterGroups
+                  types={stagedTypes}
+                  countries={stagedCountries}
+                  onlyReg={stagedOnlyReg}
+                  availableCountries={availableCountries}
+                  onToggle={stagedToggle}
+                  onClearCountries={() => setStagedCountries([])}
+                  onSetOnlyReg={setStagedOnlyReg}
+                />
+              </div>
+            </ScrollArea>
+            {/* Sticky action bar */}
+            <div className="border-t border-border bg-surface p-3 flex gap-2">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={clearStaged}
+                disabled={stagedCount === 0}
+                className="flex-1"
+              >
+                {t("filter_clear")}
+              </Button>
+              <Button size="lg" onClick={applyStaged} className="flex-[2]">
+                {t("filter_apply")}
+                {stagedCount > 0 && (
+                  <span className="ml-1 rounded-full bg-accent-fg/20 px-1.5 py-0.5 text-[10px] tabular">
+                    {stagedCount}
+                  </span>
+                )}
+              </Button>
             </div>
           </SheetContent>
         </Sheet>
@@ -237,7 +318,7 @@ function FilterGroups({
                 onClick={() => onToggle("type", tt)}
                 aria-pressed={active}
                 className={cn(
-                  "rounded-full border px-3 py-1 text-xs transition-colors",
+                  "rounded-full border px-3 py-1.5 text-sm transition-colors",
                   active
                     ? "border-accent bg-accent/15 text-accent"
                     : "border-border text-fg-muted hover:border-accent/40 hover:text-fg",
