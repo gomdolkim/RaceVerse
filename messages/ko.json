@@ -135,7 +135,7 @@
   },
   "calendar": {
     "title": "대회 캘린더",
-    "subtitle": "앞으로 6개월 동안 열리는 대회를 한눈에",
+    "subtitle": "데이터베이스에 등록된 모든 예정 대회를 한눈에",
     "view_month": "월간",
     "view_agenda": "목록",
     "today": "오늘",

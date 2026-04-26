@@ -18,24 +18,21 @@ export default async function CalendarPage({ params }: PageProps) {
   setRequestLocale(locale);
   const t = await getTranslations("calendar");
 
-  const today = new Date();
-  const sixMonths = new Date(today);
-  sixMonths.setMonth(today.getMonth() + 6);
-
   // Restore last-selected countries from cookie (set by /races or this page).
   const cookieStore = await cookies();
   const saved = parsePrefs(cookieStore.get(FILTER_COOKIE)?.value);
   const initialCountries = saved?.countries ?? [];
 
+  // No artificial dateTo cap: pull EVERY upcoming race the DB has scheduled.
+  // race_with_next_edition view already only returns the next edition per race
+  // where event_date >= today, so this is bounded by what backend has indexed.
+  const today = new Date().toISOString().slice(0, 10);
+
   let races: Awaited<ReturnType<typeof listRaces>> = { data: [], count: 0 };
   let countries: Awaited<ReturnType<typeof listCountries>> = [];
   try {
     [races, countries] = await Promise.all([
-      listRaces({
-        dateFrom: today.toISOString().slice(0, 10),
-        dateTo: sixMonths.toISOString().slice(0, 10),
-        limit: 800,
-      }),
+      listRaces({ dateFrom: today, limit: 5000 }),
       listCountries(),
     ]);
   } catch {

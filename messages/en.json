@@ -135,7 +135,7 @@
   },
   "calendar": {
     "title": "Race calendar",
-    "subtitle": "All upcoming races for the next 6 months",
+    "subtitle": "Every upcoming race indexed in our database",
     "view_month": "Month",
     "view_agenda": "Agenda",
     "today": "Today",
