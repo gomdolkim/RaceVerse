@@ -5,27 +5,22 @@ import { CountryFlag } from "@/components/race/CountryFlag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { countryName } from "@/lib/format/country";
+import { formatEventDate } from "@/lib/format/date";
 import { Link } from "@/lib/i18n/routing";
 import { writePrefsToDocument } from "@/lib/prefs/filter-prefs";
-import type {
-  CountryStats,
-  PrimaryType,
-  RaceWithNextEdition,
-} from "@/lib/supabase/types";
+import type { CountryStats, PrimaryType, RaceWithNextEdition } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import {
-  ChevronLeft,
-  ChevronRight,
-  HelpCircle,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, HelpCircle, Sparkles, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -60,11 +55,7 @@ interface Props {
   initialSelectedCountries?: string[];
 }
 
-export function CalendarGrid({
-  races,
-  availableCountries,
-  initialSelectedCountries = [],
-}: Props) {
+export function CalendarGrid({ races, availableCountries, initialSelectedCountries = [] }: Props) {
   const t = useTranslations("calendar");
   const tRaces = useTranslations("races");
   const locale = useLocale();
@@ -83,9 +74,10 @@ export function CalendarGrid({
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
 
-  const [selectedCountries, setSelectedCountries] = useState<string[]>(
-    initialSelectedCountries,
-  );
+  const [selectedCountries, setSelectedCountries] = useState<string[]>(initialSelectedCountries);
+
+  // Day-detail dialog state — opens when user clicks a day cell with races.
+  const [dialogDay, setDialogDay] = useState<string | null>(null);
 
   // Persist country selection to cookie so it survives browser restart
   // and syncs with /races filters.
@@ -333,13 +325,27 @@ export function CalendarGrid({
           {days.map((cell) => {
             const isoKey = isoDate(cell.date);
             const dayRaces = monthRaces.get(isoKey) ?? [];
+            const hasRaces = dayRaces.length > 0;
             return (
               <div
                 key={isoKey}
+                onClick={() => hasRaces && setDialogDay(isoKey)}
+                onKeyDown={(e) => {
+                  if (!hasRaces) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setDialogDay(isoKey);
+                  }
+                }}
+                role={hasRaces ? "button" : undefined}
+                tabIndex={hasRaces ? 0 : undefined}
+                aria-label={hasRaces ? t("open_day_view", { n: dayRaces.length }) : undefined}
                 className={cn(
                   "min-h-[80px] sm:min-h-[120px] p-2 transition-colors",
                   cell.inMonth ? "bg-surface-raised" : "bg-surface text-fg-subtle/50",
                   isToday(cell.date) && "ring-1 ring-inset ring-accent",
+                  hasRaces &&
+                    "cursor-pointer hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-bg",
                 )}
               >
                 <div className="flex items-center justify-between">
@@ -351,7 +357,7 @@ export function CalendarGrid({
                   >
                     {cell.date.getDate()}
                   </span>
-                  {dayRaces.length > 0 && (
+                  {hasRaces && (
                     <span className="text-[10px] text-accent tabular">+{dayRaces.length}</span>
                   )}
                 </div>
@@ -360,6 +366,7 @@ export function CalendarGrid({
                     <li key={r.id}>
                       <Link
                         href={`/races/${r.slug}`}
+                        onClick={(e) => e.stopPropagation()}
                         className={cn(
                           "block truncate rounded px-1.5 py-0.5 text-[11px] ring-1 ring-inset",
                           TYPE_BADGE[r.primary_type],
@@ -371,7 +378,7 @@ export function CalendarGrid({
                     </li>
                   ))}
                   {dayRaces.length > 3 && (
-                    <li className="text-[10px] text-fg-subtle pl-1.5">
+                    <li className="text-[10px] text-accent/80 pl-1.5 hover:text-accent">
                       {t("more_count", { n: dayRaces.length - 3 })}
                     </li>
                   )}
@@ -381,7 +388,91 @@ export function CalendarGrid({
           })}
         </div>
       </motion.div>
+
+      {/* Day detail dialog — shows ALL races for the clicked day */}
+      <Dialog open={dialogDay !== null} onOpenChange={(open) => !open && setDialogDay(null)}>
+        <DialogContent className="max-w-2xl p-0">
+          {dialogDay && (
+            <DayDetailContent
+              isoDate={dialogDay}
+              races={monthRaces.get(dialogDay) ?? []}
+              locale={locale}
+              onClose={() => setDialogDay(null)}
+              t={t}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+function DayDetailContent({
+  isoDate,
+  races,
+  locale,
+  onClose,
+  t,
+}: {
+  isoDate: string;
+  races: RaceWithNextEdition[];
+  locale: string;
+  onClose: () => void;
+  t: ReturnType<typeof useTranslations<"calendar">>;
+}) {
+  return (
+    <>
+      <DialogHeader className="border-b border-border p-6">
+        <DialogTitle className="font-display text-2xl">
+          {t("day_dialog_title", {
+            date: formatEventDate(isoDate, undefined, locale),
+          })}
+        </DialogTitle>
+        <DialogDescription className="tabular">
+          {t("day_dialog_count", { n: races.length })}
+        </DialogDescription>
+      </DialogHeader>
+      <ScrollArea className="max-h-[60vh]">
+        <ul className="divide-y divide-border">
+          {races.map((r) => (
+            <li key={r.id}>
+              <Link
+                href={`/races/${r.slug}`}
+                onClick={onClose}
+                className="group flex items-start gap-3 px-6 py-4 transition-colors hover:bg-surface-raised"
+              >
+                <CountryFlag code={r.country_code} size={22} className="mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-fg group-hover:text-accent transition-colors line-clamp-2">
+                    {r.canonical_name}
+                  </p>
+                  <p className="mt-0.5 text-xs text-fg-muted tabular">
+                    {countryName(r.country_code, locale, r.country_name)}
+                    {r.city && ` · ${r.city}`}
+                  </p>
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] ring-1 ring-inset",
+                        TYPE_BADGE[r.primary_type],
+                      )}
+                    >
+                      {r.primary_type.replace(/_/g, " ")}
+                    </span>
+                    {r.registration_url && (
+                      <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-accent ring-1 ring-inset ring-accent/30">
+                        Open
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <ArrowRight className="size-4 mt-1 text-fg-subtle group-hover:text-accent group-hover:translate-x-0.5 transition-all shrink-0" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </ScrollArea>
+    </>
   );
 }
 

@@ -149,7 +149,11 @@
     "filter_help_short": "국가 선택 시 해당 국가의 대회만 보입니다",
     "no_races_in_month": "이 달에는 선택한 국가의 대회가 없습니다",
     "jump_to_next": "{month}로 이동",
-    "jump_to_first": "가장 가까운 일정으로 이동"
+    "jump_to_first": "가장 가까운 일정으로 이동",
+    "day_dialog_title": "{date}의 대회",
+    "day_dialog_count": "총 {n}개",
+    "open_day_view": "{n}개 대회 모두 보기",
+    "close": "닫기"
   },
   "countries": {
     "title": "국가별 대회",

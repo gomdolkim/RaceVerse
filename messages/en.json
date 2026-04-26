@@ -149,7 +149,11 @@
     "filter_help_short": "Filter to show only the selected countries' races",
     "no_races_in_month": "No races in this month for the selected countries",
     "jump_to_next": "Jump to {month}",
-    "jump_to_first": "Jump to the earliest upcoming race"
+    "jump_to_first": "Jump to the earliest upcoming race",
+    "day_dialog_title": "Races on {date}",
+    "day_dialog_count": "{n} total",
+    "open_day_view": "View all {n} races",
+    "close": "Close"
   },
   "countries": {
     "title": "Races by country",
