@@ -1,6 +1,6 @@
 import { ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { AddToCalendar } from "@/components/race/AddToCalendar";
@@ -10,7 +10,7 @@ import { RegistrationCard } from "@/components/race/RegistrationCard";
 import { RelatedRaces } from "@/components/race/RelatedRaces";
 import { ShareButtons } from "@/components/race/ShareButtons";
 import { Button } from "@/components/ui/button";
-import { countryNameKo } from "@/lib/format/country";
+import { countryName } from "@/lib/format/country";
 import { getDistancesForEdition, getRaceBySlug, getRelatedRaces } from "@/lib/queries/races";
 import { raceEventJsonLd } from "@/lib/seo/jsonld";
 
@@ -21,15 +21,18 @@ interface PageProps {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   try {
     const race = await getRaceBySlug(slug);
-    if (!race) return { title: "찾을 수 없습니다" };
-    const country = countryNameKo(race.country_code, race.country_name);
+    if (!race) return { title: locale === "en" ? "Not found" : "찾을 수 없습니다" };
+    const country = countryName(race.country_code, locale, race.country_name);
     return {
       title: `${race.canonical_name} — ${country}`,
       description:
-        race.description?.slice(0, 160) ?? `${race.canonical_name} 대회 정보, 일정, 등록 안내.`,
+        race.description?.slice(0, 160) ??
+        (locale === "en"
+          ? `${race.canonical_name} race info, schedule, registration.`
+          : `${race.canonical_name} 대회 정보, 일정, 등록 안내.`),
       openGraph: {
         title: race.canonical_name,
         description: race.description?.slice(0, 200) ?? undefined,
@@ -44,6 +47,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function RaceDetailPage({ params }: PageProps) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
+  const t = await getTranslations("race_detail");
 
   let race: Awaited<ReturnType<typeof getRaceBySlug>> = null;
   try {
@@ -75,10 +79,9 @@ export default async function RaceDetailPage({ params }: PageProps) {
 
       <div className="container-wide grid gap-10 py-12 lg:grid-cols-[1fr_360px]">
         <article className="space-y-12">
-          {/* Distances */}
           {distances.length > 0 && (
             <section>
-              <h2 className="font-display text-2xl tracking-tight">종목 / 거리</h2>
+              <h2 className="font-display text-2xl tracking-tight">{t("distances")}</h2>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 {distances.map((d) => (
                   <DistanceCard key={d.id} d={d} />
@@ -87,21 +90,20 @@ export default async function RaceDetailPage({ params }: PageProps) {
             </section>
           )}
 
-          {/* Organizer */}
           {(race.organizer_name || race.website_url) && (
             <section>
-              <h2 className="font-display text-2xl tracking-tight">주최 / 공식 정보</h2>
+              <h2 className="font-display text-2xl tracking-tight">{t("organizer_section")}</h2>
               <div className="mt-4 space-y-2">
                 {race.organizer_name && (
                   <p className="text-fg">
-                    <span className="text-fg-subtle text-sm">주최</span>{" "}
+                    <span className="text-fg-subtle text-sm">{t("organizer")}</span>{" "}
                     <span className="font-medium">{race.organizer_name}</span>
                   </p>
                 )}
                 {race.website_url && (
                   <Button asChild variant="outline" size="sm">
                     <a href={race.website_url} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="size-3.5" /> 공식 웹사이트
+                      <ExternalLink className="size-3.5" /> {t("official_site")}
                     </a>
                   </Button>
                 )}
@@ -109,9 +111,8 @@ export default async function RaceDetailPage({ params }: PageProps) {
             </section>
           )}
 
-          {/* Share + Calendar */}
           <section>
-            <h2 className="font-display text-2xl tracking-tight">공유</h2>
+            <h2 className="font-display text-2xl tracking-tight">{t("share_section")}</h2>
             <div className="mt-4 flex flex-wrap gap-2">
               <ShareButtons url={url} title={race.canonical_name} />
               {race.event_date && race.edition_id && (

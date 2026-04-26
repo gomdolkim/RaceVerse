@@ -11,10 +11,10 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { countryNameKo } from "@/lib/format/country";
-import { formatEventDate } from "@/lib/format/date";
-import { Link } from "@/lib/i18n/routing";
+import { countryName } from "@/lib/format/country";
+import { shortDate } from "@/lib/format/date";
 import { Calendar, Globe, Map, Mountain, Trophy } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -29,20 +29,22 @@ interface SearchHit {
   primary_type: string;
 }
 
-const QUICK_LINKS = [
-  { href: "/races", icon: Trophy, label: "전체 대회 둘러보기" },
-  { href: "/calendar", icon: Calendar, label: "캘린더 보기" },
-  { href: "/map", icon: Map, label: "지도에서 보기" },
-  { href: "/countries", icon: Globe, label: "국가별 보기" },
-  { href: "/trail", icon: Mountain, label: "트레일 / 울트라" },
-] as const;
-
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("command");
+
+  const QUICK_LINKS = [
+    { href: "/races", icon: Trophy, label: t("browse_all") },
+    { href: "/calendar", icon: Calendar, label: t("view_calendar") },
+    { href: "/map", icon: Map, label: t("view_map") },
+    { href: "/countries", icon: Globe, label: t("view_countries") },
+    { href: "/trail", icon: Mountain, label: t("view_trail") },
+  ];
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -98,22 +100,26 @@ export function CommandPalette() {
       <DialogContent className="overflow-hidden p-0 max-w-xl">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="대회·도시·국가 검색 (예: tokyo, KR, marathon)"
+            placeholder={t("placeholder")}
             value={q}
             onValueChange={setQ}
           />
           <CommandList>
             {q.length >= 2 && hits.length === 0 && !loading && (
-              <CommandEmpty>검색 결과가 없습니다</CommandEmpty>
+              <CommandEmpty>{t("no_results")}</CommandEmpty>
             )}
             {q.length < 2 && (
-              <CommandGroup heading="빠른 이동">
-                {QUICK_LINKS.map((q) => {
-                  const Icon = q.icon;
+              <CommandGroup heading={t("quick_links")}>
+                {QUICK_LINKS.map((link) => {
+                  const Icon = link.icon;
                   return (
-                    <CommandItem key={q.href} onSelect={() => goto(q.href)} value={q.label}>
+                    <CommandItem
+                      key={link.href}
+                      onSelect={() => goto(link.href)}
+                      value={link.label}
+                    >
                       <Icon className="size-4 text-fg-subtle" />
-                      {q.label}
+                      {link.label}
                     </CommandItem>
                   );
                 })}
@@ -122,7 +128,7 @@ export function CommandPalette() {
             {hits.length > 0 && (
               <>
                 <CommandSeparator />
-                <CommandGroup heading={`결과 ${hits.length}개`}>
+                <CommandGroup heading={t("results_count", { count: hits.length })}>
                   {hits.map((h) => (
                     <CommandItem
                       key={h.id}
@@ -133,9 +139,9 @@ export function CommandPalette() {
                       <div className="flex-1 min-w-0">
                         <p className="truncate font-medium">{h.name}</p>
                         <p className="truncate text-xs text-fg-subtle tabular">
-                          {countryNameKo(h.country_code, h.country_name)}
+                          {countryName(h.country_code, locale, h.country_name)}
                           {h.city && ` · ${h.city}`}
-                          {h.event_date && ` · ${formatEventDate(h.event_date, "yyyy.MM.dd")}`}
+                          {h.event_date && ` · ${shortDate(h.event_date, locale)}`}
                         </p>
                       </div>
                     </CommandItem>
@@ -147,14 +153,5 @@ export function CommandPalette() {
         </Command>
       </DialogContent>
     </Dialog>
-  );
-}
-
-/** Hidden link wrapper exposed for tests/keyboard nav. */
-export function CommandPaletteTriggerLink() {
-  return (
-    <Link href="#" className="sr-only">
-      Open command palette (Cmd+K)
-    </Link>
   );
 }

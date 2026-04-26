@@ -1,6 +1,6 @@
 import { EmptyState } from "@/components/feedback/EmptyState";
 import { CountryFlag } from "@/components/race/CountryFlag";
-import { countryNameKo } from "@/lib/format/country";
+import { countryName } from "@/lib/format/country";
 import { Link } from "@/lib/i18n/routing";
 import { listCountries } from "@/lib/queries/countries";
 import { formatNumber } from "@/lib/utils";
@@ -31,14 +31,14 @@ export default async function CountriesPage({ params }: PageProps) {
       <header className="mb-10 max-w-2xl">
         <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{t("title")}</h1>
         <p className="mt-2 text-fg-muted tabular">
-          {t("subtitle", { count: formatNumber(countries.length) })}
+          {t("subtitle", { count: formatNumber(countries.length, locale) })}
         </p>
       </header>
 
       {dbError && (
         <EmptyState
           icon={<Globe className="size-8" />}
-          title="국가 목록을 불러올 수 없습니다"
+          title={t("load_error")}
           description={dbError}
         />
       )}
@@ -46,8 +46,8 @@ export default async function CountriesPage({ params }: PageProps) {
       {!dbError && countries.length === 0 && (
         <EmptyState
           icon={<Globe className="size-8" />}
-          title="국가 데이터가 없습니다"
-          description="DB 마이그레이션 적용 상태를 확인해주세요."
+          title={t("empty")}
+          description={t("empty_hint")}
         />
       )}
 
@@ -63,25 +63,35 @@ export default async function CountriesPage({ params }: PageProps) {
                   <CountryFlag code={c.country_code} size={32} />
                   <div className="min-w-0">
                     <p className="font-display text-lg tracking-tight truncate">
-                      {countryNameKo(c.country_code, c.country_name)}
+                      {countryName(c.country_code, locale, c.country_name)}
                     </p>
                     <p className="text-xs text-fg-subtle font-mono">{c.country_code}</p>
                   </div>
                 </div>
                 <dl className="grid grid-cols-3 gap-2 mt-auto pt-3 border-t border-border/60">
                   <div>
-                    <dt className="text-[10px] text-fg-subtle uppercase tracking-wider">전체</dt>
-                    <dd className="font-display text-lg tabular">{formatNumber(c.race_count)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-[10px] text-fg-subtle uppercase tracking-wider">로드</dt>
+                    <dt className="text-[10px] text-fg-subtle uppercase tracking-wider">
+                      {t("stat_total")}
+                    </dt>
                     <dd className="font-display text-lg tabular">
-                      {formatNumber(c.marathon_count)}
+                      {formatNumber(c.race_count, locale)}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-[10px] text-fg-subtle uppercase tracking-wider">트레일</dt>
-                    <dd className="font-display text-lg tabular">{formatNumber(c.trail_count)}</dd>
+                    <dt className="text-[10px] text-fg-subtle uppercase tracking-wider">
+                      {t("stat_road")}
+                    </dt>
+                    <dd className="font-display text-lg tabular">
+                      {formatNumber(c.marathon_count, locale)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10px] text-fg-subtle uppercase tracking-wider">
+                      {t("stat_trail")}
+                    </dt>
+                    <dd className="font-display text-lg tabular">
+                      {formatNumber(c.trail_count, locale)}
+                    </dd>
                   </div>
                 </dl>
               </Link>

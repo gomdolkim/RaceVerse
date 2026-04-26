@@ -10,20 +10,20 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { countryNameKo } from "@/lib/format/country";
+import { countryName } from "@/lib/format/country";
 import { formatEventDate } from "@/lib/format/date";
 import { ArrowRight } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState } from "react";
 
-// MapLibre is browser-only — SSR off, client-only render.
 const RaceMap = dynamic(() => import("@/components/map/RaceMap").then((m) => m.RaceMap), {
   ssr: false,
   loading: () => (
     <div className="grid h-full place-items-center">
       <span className="rounded-full bg-surface-raised px-3 py-1 text-xs text-fg-muted">
-        지도 로딩 중...
+        Loading…
       </span>
     </div>
   ),
@@ -31,6 +31,8 @@ const RaceMap = dynamic(() => import("@/components/map/RaceMap").then((m) => m.R
 
 export default function MapClient() {
   const [selected, setSelected] = useState<MapRace | null>(null);
+  const locale = useLocale();
+  const t = useTranslations("map");
 
   return (
     <>
@@ -43,16 +45,16 @@ export default function MapClient() {
               {selected?.name}
             </SheetTitle>
             <SheetDescription className="tabular">
-              {selected && countryNameKo(selected.country_code)}
+              {selected && countryName(selected.country_code, locale)}
               {selected?.city && ` · ${selected.city}`}
-              {selected?.event_date && ` · ${formatEventDate(selected.event_date)}`}
+              {selected?.event_date && ` · ${formatEventDate(selected.event_date, undefined, locale)}`}
             </SheetDescription>
           </SheetHeader>
           {selected && (
             <div className="px-6 pb-6">
               <Button asChild>
                 <Link href={`/races/${selected.slug}`}>
-                  자세히 보기
+                  {t("view_details")}
                   <ArrowRight className="size-4" />
                 </Link>
               </Button>

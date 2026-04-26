@@ -7,7 +7,7 @@ import {
   getMonthlyDistribution,
   getTypeDistribution,
 } from "@/lib/queries/stats";
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 export const revalidate = 3600;
 
@@ -18,6 +18,7 @@ interface PageProps {
 export default async function InsightsPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const t = await getTranslations("insights");
 
   const [counts, monthly, types, distances, countries] = await Promise.all([
     getDatasetCounts().catch(() => ({
@@ -35,15 +36,15 @@ export default async function InsightsPage({ params }: PageProps) {
   return (
     <div className="container-wide py-10 sm:py-14">
       <header className="mb-10 max-w-2xl">
-        <h1 className="font-display text-3xl tracking-tight sm:text-4xl">데이터 인사이트</h1>
-        <p className="mt-2 text-fg-muted">RaceVerse가 추적 중인 대회 데이터의 분포와 통계</p>
+        <h1 className="font-display text-3xl tracking-tight sm:text-4xl">{t("title")}</h1>
+        <p className="mt-2 text-fg-muted">{t("subtitle")}</p>
       </header>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-px overflow-hidden rounded-2xl border border-border bg-border mb-10">
-        <Stat label="등록 대회" value={counts.races} />
-        <Stat label="좌표 보유" value={counts.geocoded} />
-        <Stat label="국가" value={counts.countries} />
-        <Stat label="등록 가능" value={counts.withRegistration} />
+        <Stat label={t("stat_races")} value={counts.races} />
+        <Stat label={t("stat_geocoded")} value={counts.geocoded} />
+        <Stat label={t("stat_countries")} value={counts.countries} />
+        <Stat label={t("stat_with_registration")} value={counts.withRegistration} />
       </div>
 
       <InsightsCharts

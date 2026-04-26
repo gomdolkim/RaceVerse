@@ -71,8 +71,7 @@ export default async function HomePage({ params }: PageProps) {
           <RaceList races={upcoming} />
         ) : (
           <p className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-fg-muted">
-            데이터 연결 후 곧 표시됩니다. <code className="text-fg">.env.local</code>의{" "}
-            <code className="text-fg">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>를 확인하세요.
+            {t("no_data_yet", { var: "NEXT_PUBLIC_SUPABASE_ANON_KEY" })}
           </p>
         )}
       </section>

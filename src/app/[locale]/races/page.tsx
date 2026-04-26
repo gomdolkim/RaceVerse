@@ -2,11 +2,14 @@ import { EmptyState } from "@/components/feedback/EmptyState";
 import { FilterBar } from "@/components/filter/FilterBar";
 import { Pagination } from "@/components/filter/Pagination";
 import { RaceList } from "@/components/race/RaceList";
+import { FILTER_COOKIE, parsePrefs } from "@/lib/prefs/filter-prefs";
+import { listCountries } from "@/lib/queries/countries";
 import { listRaces } from "@/lib/queries/races";
-import { parseFilters } from "@/lib/url-state/filters";
+import { isEmpty, parseFilters } from "@/lib/url-state/filters";
 import { formatNumber } from "@/lib/utils";
 import { Search } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { cookies } from "next/headers";
 
 export const revalidate = 600;
 
@@ -19,13 +22,30 @@ export default async function RacesPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
   const sp = await searchParams;
-  const filters = parseFilters(sp);
+  let filters = parseFilters(sp);
   const t = await getTranslations("races");
 
+  // Restore from cookie when URL has no filter params.
+  if (isEmpty(filters)) {
+    const cookieStore = await cookies();
+    const saved = parsePrefs(cookieStore.get(FILTER_COOKIE)?.value);
+    if (saved) {
+      filters = {
+        ...filters,
+        countries: saved.countries,
+        types: saved.types,
+        onlyWithRegistration: saved.onlyWithRegistration,
+        dateFrom: saved.dateFrom,
+        dateTo: saved.dateTo,
+      };
+    }
+  }
+
   let data: Awaited<ReturnType<typeof listRaces>> = { data: [], count: 0 };
+  let countries: Awaited<ReturnType<typeof listCountries>> = [];
   let dbError: string | null = null;
   try {
-    data = await listRaces(filters);
+    [data, countries] = await Promise.all([listRaces(filters), listCountries()]);
   } catch (err) {
     dbError = (err as Error).message;
   }
@@ -40,18 +60,18 @@ export default async function RacesPage({ params, searchParams }: PageProps) {
         <p className="mt-2 text-fg-muted">{t("subtitle")}</p>
       </header>
 
-      <FilterBar />
+      <FilterBar availableCountries={countries} />
 
       <div className="mt-8">
         <p className="mb-5 text-sm text-fg-muted tabular">
-          {t("results_count", { count: formatNumber(data.count) })}
+          {t("results_count", { count: formatNumber(data.count, locale) })}
         </p>
 
         {dbError && (
           <EmptyState
             icon={<Search className="size-8" />}
-            title="데이터에 연결할 수 없습니다"
-            description={`Supabase 환경 변수와 마이그레이션 적용 상태를 확인해주세요. (${dbError})`}
+            title={t("db_error")}
+            description={`${t("db_error_hint")} (${dbError})`}
           />
         )}
 

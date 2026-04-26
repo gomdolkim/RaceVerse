@@ -2,17 +2,51 @@
 
 import { CountryFlag } from "@/components/race/CountryFlag";
 import { Button } from "@/components/ui/button";
-import { PRIMARY_TYPE_BADGE } from "@/lib/format/race";
 import { Link } from "@/lib/i18n/routing";
-import type { RaceWithNextEdition } from "@/lib/supabase/types";
+import type { PrimaryType, RaceWithNextEdition } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+const TYPE_BADGE: Record<PrimaryType, string> = {
+  road_marathon: "bg-orange-500/15 text-orange-300 ring-orange-500/30",
+  road_other: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
+  trail: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
+  ultra: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
+  mixed: "bg-violet-500/15 text-violet-300 ring-violet-500/30",
+  virtual: "bg-cyan-500/15 text-cyan-300 ring-cyan-500/30",
+  unknown: "bg-zinc-500/15 text-zinc-300 ring-zinc-500/30",
+};
+
+const MONTH_NAMES_EN = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 export function CalendarGrid({ races }: { races: RaceWithNextEdition[] }) {
+  const t = useTranslations("calendar");
+  const locale = useLocale();
+  const weekdays = (t.raw("weekdays") as string[]) ?? [
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+  ];
   const [cursor, setCursor] = useState(() => {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -56,6 +90,17 @@ export function CalendarGrid({ races }: { races: RaceWithNextEdition[] }) {
     setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + delta, 1));
   }
 
+  const monthLabel =
+    locale === "en"
+      ? t("month_year", {
+          month: MONTH_NAMES_EN[cursor.getMonth()],
+          year: cursor.getFullYear(),
+        })
+      : t("month_year", {
+          year: cursor.getFullYear(),
+          month: cursor.getMonth() + 1,
+        });
+
   return (
     <motion.div
       key={cursor.toISOString()}
@@ -64,11 +109,14 @@ export function CalendarGrid({ races }: { races: RaceWithNextEdition[] }) {
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
     >
       <header className="mb-4 flex items-center justify-between">
-        <h2 className="font-display text-2xl tabular">
-          {cursor.getFullYear()}년 {cursor.getMonth() + 1}월
-        </h2>
+        <h2 className="font-display text-2xl tabular">{monthLabel}</h2>
         <div className="flex gap-1">
-          <Button size="icon" variant="outline" onClick={() => shift(-1)} aria-label="이전 달">
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => shift(-1)}
+            aria-label={t("prev_month")}
+          >
             <ChevronLeft className="size-4" />
           </Button>
           <Button
@@ -76,15 +124,20 @@ export function CalendarGrid({ races }: { races: RaceWithNextEdition[] }) {
             variant="outline"
             onClick={() => setCursor(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
           >
-            오늘
+            {t("today")}
           </Button>
-          <Button size="icon" variant="outline" onClick={() => shift(1)} aria-label="다음 달">
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => shift(1)}
+            aria-label={t("next_month")}
+          >
             <ChevronRight className="size-4" />
           </Button>
         </div>
       </header>
       <div className="grid grid-cols-7 gap-px overflow-hidden rounded-xl border border-border bg-border">
-        {WEEKDAYS.map((d) => (
+        {weekdays.map((d) => (
           <div
             key={d}
             className="bg-surface px-3 py-2 text-xs font-medium text-fg-muted uppercase tracking-wider tabular"
@@ -92,12 +145,12 @@ export function CalendarGrid({ races }: { races: RaceWithNextEdition[] }) {
             {d}
           </div>
         ))}
-        {days.map((cell, i) => {
+        {days.map((cell) => {
           const isoKey = isoDate(cell.date);
           const dayRaces = monthRaces.get(isoKey) ?? [];
           return (
             <div
-              key={i}
+              key={isoKey}
               className={cn(
                 "min-h-[80px] sm:min-h-[120px] p-2 transition-colors",
                 cell.inMonth ? "bg-surface-raised" : "bg-surface text-fg-subtle/50",
@@ -124,7 +177,7 @@ export function CalendarGrid({ races }: { races: RaceWithNextEdition[] }) {
                       href={`/races/${r.slug}`}
                       className={cn(
                         "block truncate rounded px-1.5 py-0.5 text-[11px] ring-1 ring-inset",
-                        PRIMARY_TYPE_BADGE[r.primary_type],
+                        TYPE_BADGE[r.primary_type],
                       )}
                     >
                       <CountryFlag code={r.country_code} size={11} />{" "}
@@ -133,7 +186,9 @@ export function CalendarGrid({ races }: { races: RaceWithNextEdition[] }) {
                   </li>
                 ))}
                 {dayRaces.length > 3 && (
-                  <li className="text-[10px] text-fg-subtle pl-1.5">+{dayRaces.length - 3}개 더</li>
+                  <li className="text-[10px] text-fg-subtle pl-1.5">
+                    {t("more_count", { n: dayRaces.length - 3 })}
+                  </li>
                 )}
               </ul>
             </div>
@@ -145,7 +200,9 @@ export function CalendarGrid({ races }: { races: RaceWithNextEdition[] }) {
 }
 
 function isoDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
 }
 
 function isToday(d: Date): boolean {

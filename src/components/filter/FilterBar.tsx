@@ -11,32 +11,38 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { PRIMARY_TYPES, PRIMARY_TYPE_LABEL_KO } from "@/lib/format/race";
-import type { PrimaryType } from "@/lib/supabase/types";
+import { countryName } from "@/lib/format/country";
+import { writePrefsToDocument } from "@/lib/prefs/filter-prefs";
+import type { CountryStats, PrimaryType } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { Search, SlidersHorizontal, X } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
+import { CountryPicker } from "./CountryPicker";
 
-const TOP_COUNTRIES: { code: string; label: string }[] = [
-  { code: "KR", label: "🇰🇷 한국" },
-  { code: "JP", label: "🇯🇵 일본" },
-  { code: "US", label: "🇺🇸 미국" },
-  { code: "GB", label: "🇬🇧 영국" },
-  { code: "FR", label: "🇫🇷 프랑스" },
-  { code: "DE", label: "🇩🇪 독일" },
-  { code: "IT", label: "🇮🇹 이탈리아" },
-  { code: "ES", label: "🇪🇸 스페인" },
-  { code: "CH", label: "🇨🇭 스위스" },
-  { code: "AU", label: "🇦🇺 호주" },
-  { code: "CA", label: "🇨🇦 캐나다" },
+const PRIMARY_TYPES: PrimaryType[] = [
+  "road_marathon",
+  "road_other",
+  "trail",
+  "ultra",
+  "mixed",
+  "virtual",
+  "unknown",
 ];
 
-export function FilterBar() {
+export function FilterBar({ availableCountries }: { availableCountries: CountryStats[] }) {
   const router = useRouter();
   const params = useSearchParams();
   const [pending, start] = useTransition();
   const [q, setQ] = useState(params.get("q") ?? "");
+  const t = useTranslations("races");
+  const tType = useTranslations("primary_type");
+  const locale = useLocale();
+
+  const types = (params.get("type") ?? "").split(",").filter(Boolean);
+  const countries = (params.get("country") ?? "").split(",").filter(Boolean);
+  const onlyReg = params.get("reg") === "1";
 
   const update = useCallback(
     (mut: (sp: URLSearchParams) => void) => {
@@ -46,26 +52,46 @@ export function FilterBar() {
       const qs = sp.toString();
       start(() => router.replace(`?${qs}`, { scroll: false }));
     },
-    [params, router, start],
+    [params, router],
   );
 
   const toggleMulti = (key: string, value: string) => {
     const current = (params.get(key) ?? "").split(",").filter(Boolean);
-    const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+    const next = current.includes(value)
+      ? current.filter((v) => v !== value)
+      : [...current, value];
     update((sp) => {
       if (next.length) sp.set(key, next.join(","));
       else sp.delete(key);
     });
   };
 
-  const types = (params.get("type") ?? "").split(",").filter(Boolean);
-  const countries = (params.get("country") ?? "").split(",").filter(Boolean);
-  const onlyReg = params.get("reg") === "1";
+  const setOnlyReg = (v: boolean) =>
+    update((sp) => (v ? sp.set("reg", "1") : sp.delete("reg")));
+
+  const clearAll = () => {
+    setQ("");
+    router.replace(window.location.pathname, { scroll: false });
+  };
+
+  // Persist current filter state to cookie whenever URL changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: derived strings cover deps
+  useEffect(() => {
+    writePrefsToDocument({
+      countries: countries.length ? countries : undefined,
+      types: types.length ? (types as PrimaryType[]) : undefined,
+      onlyWithRegistration: onlyReg || undefined,
+      dateFrom: params.get("from") ?? undefined,
+      dateTo: params.get("to") ?? undefined,
+    });
+  }, [countries.join(","), types.join(","), onlyReg, params]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     update((sp) => (q ? sp.set("q", q) : sp.delete("q")));
   };
+
+  const hasActive = countries.length > 0 || types.length > 0 || onlyReg;
 
   return (
     <div className="space-y-4">
@@ -75,32 +101,38 @@ export function FilterBar() {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="대회·도시·국가 검색"
+            placeholder={t("search_placeholder")}
             className="pl-9"
-            aria-label="검색"
+            aria-label={t("search_button")}
           />
         </div>
         <Button type="submit" disabled={pending}>
-          검색
+          {t("search_button")}
         </Button>
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="outline" className="lg:hidden" aria-label="필터 열기">
+            <Button variant="outline" className="lg:hidden" aria-label={t("filter_open")}>
               <SlidersHorizontal className="size-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[85vh]">
+          <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
             <SheetHeader>
-              <SheetTitle>필터</SheetTitle>
-              <SheetDescription>여러 조건을 조합해 검색하세요</SheetDescription>
+              <SheetTitle>{t("filter_open")}</SheetTitle>
+              <SheetDescription>{t("subtitle")}</SheetDescription>
             </SheetHeader>
-            <div className="px-6 pb-6 space-y-6 overflow-y-auto">
+            <div className="px-6 pb-6 space-y-6">
               <FilterGroups
                 types={types}
                 countries={countries}
                 onlyReg={onlyReg}
+                availableCountries={availableCountries}
                 onToggle={toggleMulti}
-                onToggleReg={(v) => update((sp) => (v ? sp.set("reg", "1") : sp.delete("reg")))}
+                onClearCountries={() =>
+                  update((sp) => {
+                    sp.delete("country");
+                  })
+                }
+                onSetOnlyReg={setOnlyReg}
               />
             </div>
           </SheetContent>
@@ -112,12 +144,18 @@ export function FilterBar() {
           types={types}
           countries={countries}
           onlyReg={onlyReg}
+          availableCountries={availableCountries}
           onToggle={toggleMulti}
-          onToggleReg={(v) => update((sp) => (v ? sp.set("reg", "1") : sp.delete("reg")))}
+          onClearCountries={() =>
+            update((sp) => {
+              sp.delete("country");
+            })
+          }
+          onSetOnlyReg={setOnlyReg}
         />
       </div>
 
-      {(types.length > 0 || countries.length > 0 || onlyReg) && (
+      {hasActive && (
         <div className="flex flex-wrap items-center gap-2 pt-1">
           {countries.map((c) => (
             <Badge
@@ -126,18 +164,18 @@ export function FilterBar() {
               className="cursor-pointer gap-1 pl-2 pr-1"
               onClick={() => toggleMulti("country", c)}
             >
-              {c}
+              {countryName(c, locale, null)}
               <X className="size-3" />
             </Badge>
           ))}
-          {types.map((t) => (
+          {types.map((tt) => (
             <Badge
-              key={`t-${t}`}
+              key={`t-${tt}`}
               variant="accent"
               className="cursor-pointer gap-1 pl-2 pr-1"
-              onClick={() => toggleMulti("type", t)}
+              onClick={() => toggleMulti("type", tt)}
             >
-              {PRIMARY_TYPE_LABEL_KO[t as PrimaryType] ?? t}
+              {tType(tt as PrimaryType)}
               <X className="size-3" />
             </Badge>
           ))}
@@ -145,19 +183,19 @@ export function FilterBar() {
             <Badge
               variant="accent"
               className="cursor-pointer gap-1 pl-2 pr-1"
-              onClick={() => update((sp) => sp.delete("reg"))}
+              onClick={() => setOnlyReg(false)}
             >
-              등록 가능만
+              {t("filter_only_registration")}
               <X className="size-3" />
             </Badge>
           )}
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.replace(window.location.pathname, { scroll: false })}
+            onClick={clearAll}
             className="ml-auto text-xs text-fg-muted"
           >
-            전체 초기화
+            {t("filter_clear")}
           </Button>
         </div>
       )}
@@ -165,33 +203,42 @@ export function FilterBar() {
   );
 }
 
+interface GroupsProps {
+  types: string[];
+  countries: string[];
+  onlyReg: boolean;
+  availableCountries: CountryStats[];
+  onToggle: (key: string, value: string) => void;
+  onClearCountries: () => void;
+  onSetOnlyReg: (v: boolean) => void;
+}
+
 function FilterGroups({
   types,
   countries,
   onlyReg,
+  availableCountries,
   onToggle,
-  onToggleReg,
-}: {
-  types: string[];
-  countries: string[];
-  onlyReg: boolean;
-  onToggle: (key: string, value: string) => void;
-  onToggleReg: (v: boolean) => void;
-}) {
+  onClearCountries,
+  onSetOnlyReg,
+}: GroupsProps) {
+  const t = useTranslations("races");
+  const tType = useTranslations("primary_type");
+
   return (
     <div className="grid gap-6 lg:grid-cols-3">
       <fieldset>
         <legend className="text-xs font-semibold uppercase tracking-wider text-fg-subtle mb-2">
-          종목
+          {t("filter_type")}
         </legend>
         <div className="flex flex-wrap gap-1.5">
-          {PRIMARY_TYPES.map((t) => {
-            const active = types.includes(t);
+          {PRIMARY_TYPES.map((tt) => {
+            const active = types.includes(tt);
             return (
               <button
                 type="button"
-                key={t}
-                onClick={() => onToggle("type", t)}
+                key={tt}
+                onClick={() => onToggle("type", tt)}
                 aria-pressed={active}
                 className={cn(
                   "rounded-full border px-3 py-1 text-xs transition-colors",
@@ -200,7 +247,7 @@ function FilterGroups({
                     : "border-border text-fg-muted hover:border-accent/40 hover:text-fg",
                 )}
               >
-                {PRIMARY_TYPE_LABEL_KO[t]}
+                {tType(tt)}
               </button>
             );
           })}
@@ -209,43 +256,28 @@ function FilterGroups({
 
       <fieldset>
         <legend className="text-xs font-semibold uppercase tracking-wider text-fg-subtle mb-2">
-          국가
+          {t("filter_country")}
         </legend>
-        <div className="flex flex-wrap gap-1.5">
-          {TOP_COUNTRIES.map((c) => {
-            const active = countries.includes(c.code);
-            return (
-              <button
-                type="button"
-                key={c.code}
-                onClick={() => onToggle("country", c.code)}
-                aria-pressed={active}
-                className={cn(
-                  "rounded-full border px-3 py-1 text-xs transition-colors",
-                  active
-                    ? "border-accent bg-accent/15 text-accent"
-                    : "border-border text-fg-muted hover:border-accent/40 hover:text-fg",
-                )}
-              >
-                {c.label}
-              </button>
-            );
-          })}
-        </div>
+        <CountryPicker
+          available={availableCountries}
+          selected={countries}
+          onToggle={(c) => onToggle("country", c)}
+          onClear={onClearCountries}
+        />
       </fieldset>
 
       <fieldset>
         <legend className="text-xs font-semibold uppercase tracking-wider text-fg-subtle mb-2">
-          기타
+          {t("filter_other")}
         </legend>
         <label className="flex items-center gap-2 text-sm text-fg-muted cursor-pointer">
           <input
             type="checkbox"
             checked={onlyReg}
-            onChange={(e) => onToggleReg(e.target.checked)}
+            onChange={(e) => onSetOnlyReg(e.target.checked)}
             className="size-4 rounded border-border-strong text-accent focus:ring-accent"
           />
-          등록 가능한 대회만
+          {t("filter_only_registration")}
         </label>
       </fieldset>
     </div>

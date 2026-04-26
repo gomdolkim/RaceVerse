@@ -1,8 +1,8 @@
 "use client";
 
-import { countryNameKo } from "@/lib/format/country";
-import { PRIMARY_TYPE_LABEL_KO } from "@/lib/format/race";
+import { countryName } from "@/lib/format/country";
 import type { CountryStats, PrimaryType } from "@/lib/supabase/types";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Bar,
   BarChart,
@@ -38,9 +38,12 @@ interface Props {
 }
 
 export function InsightsCharts({ monthly, types, distances, topCountries }: Props) {
+  const t = useTranslations("insights");
+  const tType = useTranslations("primary_type");
+  const locale = useLocale();
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      <Card title="월별 대회 일정" subtitle="향후 6개월 분포">
+      <Card title={t("chart_monthly")} subtitle={t("chart_monthly_sub")}>
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={monthly}>
             <CartesianGrid strokeDasharray="3 3" stroke="oklch(var(--border) / 0.5)" />
@@ -73,13 +76,13 @@ export function InsightsCharts({ monthly, types, distances, topCountries }: Prop
         </ResponsiveContainer>
       </Card>
 
-      <Card title="종목별 분포" subtitle="primary_type 기준">
+      <Card title={t("chart_types")} subtitle={t("chart_types_sub")}>
         <ResponsiveContainer width="100%" height={260}>
           <PieChart>
             <Pie
-              data={types.map((t) => ({
-                name: PRIMARY_TYPE_LABEL_KO[t.primary_type as PrimaryType] ?? t.primary_type,
-                value: t.count,
+              data={types.map((tt) => ({
+                name: tType(tt.primary_type as PrimaryType),
+                value: tt.count,
               }))}
               dataKey="value"
               nameKey="name"
@@ -110,7 +113,7 @@ export function InsightsCharts({ monthly, types, distances, topCountries }: Prop
         </ResponsiveContainer>
       </Card>
 
-      <Card title="거리 분포" subtitle="race_distances 기준">
+      <Card title={t("chart_distance")} subtitle={t("chart_distance_sub")}>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={distances}>
             <CartesianGrid strokeDasharray="3 3" stroke="oklch(var(--border) / 0.5)" />
@@ -136,11 +139,11 @@ export function InsightsCharts({ monthly, types, distances, topCountries }: Prop
         </ResponsiveContainer>
       </Card>
 
-      <Card title="대회 수 상위 국가">
+      <Card title={t("chart_top_countries")}>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart
             data={topCountries.map((c) => ({
-              name: countryNameKo(c.country_code, c.country_name),
+              name: countryName(c.country_code, locale, c.country_name),
               value: c.race_count,
             }))}
             layout="vertical"
