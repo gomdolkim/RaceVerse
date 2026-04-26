@@ -6,10 +6,11 @@ import { RaceList } from "@/components/race/RaceList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { countryName } from "@/lib/format/country";
+import { Link } from "@/lib/i18n/routing";
+import { readPrefsFromDocument, writePrefsToDocument } from "@/lib/prefs/filter-prefs";
 import { writeInterestsToDocument } from "@/lib/prefs/interests";
 import type { CountryStats, RaceWithNextEdition } from "@/lib/supabase/types";
 import { ArrowRight, Heart, Pencil, Sparkles, X } from "lucide-react";
-import { Link } from "@/lib/i18n/routing";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -36,8 +37,22 @@ export function InterestsSection({ initialInterests, availableCountries, races }
 
   const showPicker = isFirstVisit || editing;
 
+  /**
+   * Sync interests → filter cookie so /races and /calendar pre-filter to
+   * these countries automatically. Other filter fields (types, dates) are
+   * preserved if the user had any.
+   */
+  function syncToFilterPrefs(countries: string[]) {
+    const existing = readPrefsFromDocument() ?? {};
+    writePrefsToDocument({
+      ...existing,
+      countries: countries.length ? countries : undefined,
+    });
+  }
+
   function save() {
     writeInterestsToDocument(selected);
+    syncToFilterPrefs(selected);
     setEditing(false);
     startTransition(() => {
       router.refresh();
@@ -46,6 +61,7 @@ export function InterestsSection({ initialInterests, availableCountries, races }
 
   function skip() {
     writeInterestsToDocument([]);
+    // Don't touch filter prefs on skip — user opted out, not opting "no countries".
     startTransition(() => {
       router.refresh();
     });
@@ -57,9 +73,7 @@ export function InterestsSection({ initialInterests, availableCountries, races }
   }
 
   function toggle(code: string) {
-    setSelected((prev) =>
-      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
-    );
+    setSelected((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
   }
 
   // Picker UI (first visit OR editing)
