@@ -4,6 +4,11 @@ import { CountryPicker } from "@/components/filter/CountryPicker";
 import { CountryFlag } from "@/components/race/CountryFlag";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { countryName } from "@/lib/format/country";
 import { Link } from "@/lib/i18n/routing";
 import { writePrefsToDocument } from "@/lib/prefs/filter-prefs";
@@ -14,9 +19,15 @@ import type {
 } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  HelpCircle,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const TYPE_BADGE: Record<PrimaryType, string> = {
   road_marathon: "bg-orange-500/15 text-orange-300 ring-orange-500/30",
@@ -92,6 +103,45 @@ export function CalendarGrid({
     return races.filter((r) => r.country_code && set.has(r.country_code.toUpperCase()));
   }, [races, selectedCountries]);
 
+  // Earliest upcoming race month (within filteredRaces).
+  const firstRaceMonth = useMemo(() => {
+    let earliest: Date | null = null;
+    for (const r of filteredRaces) {
+      if (!r.event_date) continue;
+      const d = new Date(r.event_date);
+      if (!earliest || d < earliest) earliest = d;
+    }
+    return earliest ? new Date(earliest.getFullYear(), earliest.getMonth(), 1) : null;
+  }, [filteredRaces]);
+
+  // When user changes the country filter, jump cursor forward to the first
+  // month that actually has races. This avoids the "calendar looks empty"
+  // confusion (e.g., user picks Thailand but cursor sits on July when the
+  // earliest Thai race is in May).
+  const lastFilterKeyRef = useRef("");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional: react to filter change
+  useEffect(() => {
+    const key = selectedCountries.join(",");
+    if (key === lastFilterKeyRef.current) return;
+    lastFilterKeyRef.current = key;
+    if (!firstRaceMonth) return;
+    setCursor((prev) => {
+      // Only jump when current month has zero matching races.
+      const cursorMonth = prev.getFullYear() * 12 + prev.getMonth();
+      const firstMonth = firstRaceMonth.getFullYear() * 12 + firstRaceMonth.getMonth();
+      if (cursorMonth >= firstMonth) {
+        // Check whether current month actually has results — if not, jump forward.
+        const has = filteredRaces.some((r) => {
+          if (!r.event_date) return false;
+          const d = new Date(r.event_date);
+          return d.getFullYear() === prev.getFullYear() && d.getMonth() === prev.getMonth();
+        });
+        if (has) return prev;
+      }
+      return firstRaceMonth;
+    });
+  }, [selectedCountries.join(","), firstRaceMonth]);
+
   const monthRaces = useMemo(() => {
     const map = new Map<string, RaceWithNextEdition[]>();
     const start = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
@@ -149,6 +199,16 @@ export function CalendarGrid({
 
   const totalCount = filteredRaces.length;
 
+  // Are there any races in the currently displayed month?
+  const monthHasRaces = monthRaces.size > 0;
+
+  // For the "jump to first" hint when current month is empty.
+  const firstRaceMonthLabel = firstRaceMonth
+    ? locale === "en"
+      ? `${MONTH_NAMES_EN[firstRaceMonth.getMonth()]} ${firstRaceMonth.getFullYear()}`
+      : `${firstRaceMonth.getFullYear()}년 ${firstRaceMonth.getMonth() + 1}월`
+    : null;
+
   return (
     <div>
       {/* Country filter row */}
@@ -159,6 +219,25 @@ export function CalendarGrid({
           onToggle={toggleCountry}
           onClear={() => setSelectedCountries([])}
         />
+
+        {/* Inline help — short on mobile, fuller on desktop, tooltip for both */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              tabIndex={0}
+              className="inline-flex cursor-help items-center gap-1.5 rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-fg-muted hover:border-accent/40 hover:text-fg transition-colors"
+              aria-label={t("filter_help")}
+            >
+              <HelpCircle className="size-3.5" />
+              <span className="hidden md:inline">{t("filter_help_short")}</span>
+              <span className="inline md:hidden">?</span>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-[260px] text-xs leading-relaxed">
+            {t("filter_help")}
+          </TooltipContent>
+        </Tooltip>
+
         <div className="flex flex-wrap items-center gap-1.5">
           {selectedCountries.map((c) => (
             <Badge
@@ -183,10 +262,27 @@ export function CalendarGrid({
             </Button>
           )}
         </div>
+
         <span className="ml-auto text-xs text-fg-subtle tabular">
           {tRaces("results_count", { count: totalCount })}
         </span>
       </div>
+
+      {/* Empty-month hint with jump-to-first action */}
+      {!monthHasRaces && firstRaceMonth && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-border bg-surface/40 px-4 py-3 text-sm">
+          <Sparkles className="size-4 text-accent" />
+          <span className="text-fg-muted">{t("no_races_in_month")}</span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setCursor(firstRaceMonth)}
+            className="ml-auto"
+          >
+            {t("jump_to_next", { month: firstRaceMonthLabel ?? "" })}
+          </Button>
+        </div>
+      )}
 
       <motion.div
         key={cursor.toISOString()}
