@@ -1,8 +1,11 @@
 import { CalendarGrid } from "@/components/calendar/CalendarGrid";
 import { EmptyState } from "@/components/feedback/EmptyState";
+import { FILTER_COOKIE, parsePrefs } from "@/lib/prefs/filter-prefs";
+import { listCountries } from "@/lib/queries/countries";
 import { listRaces } from "@/lib/queries/races";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { cookies } from "next/headers";
 
 export const revalidate = 1800;
 
@@ -19,13 +22,22 @@ export default async function CalendarPage({ params }: PageProps) {
   const sixMonths = new Date(today);
   sixMonths.setMonth(today.getMonth() + 6);
 
+  // Restore last-selected countries from cookie (set by /races or this page).
+  const cookieStore = await cookies();
+  const saved = parsePrefs(cookieStore.get(FILTER_COOKIE)?.value);
+  const initialCountries = saved?.countries ?? [];
+
   let races: Awaited<ReturnType<typeof listRaces>> = { data: [], count: 0 };
+  let countries: Awaited<ReturnType<typeof listCountries>> = [];
   try {
-    races = await listRaces({
-      dateFrom: today.toISOString().slice(0, 10),
-      dateTo: sixMonths.toISOString().slice(0, 10),
-      limit: 500,
-    });
+    [races, countries] = await Promise.all([
+      listRaces({
+        dateFrom: today.toISOString().slice(0, 10),
+        dateTo: sixMonths.toISOString().slice(0, 10),
+        limit: 800,
+      }),
+      listCountries(),
+    ]);
   } catch {
     /* ignore */
   }
@@ -40,7 +52,11 @@ export default async function CalendarPage({ params }: PageProps) {
       {races.data.length === 0 ? (
         <EmptyState icon={<CalendarIcon className="size-8" />} title={t("no_upcoming")} />
       ) : (
-        <CalendarGrid races={races.data} />
+        <CalendarGrid
+          races={races.data}
+          availableCountries={countries}
+          initialSelectedCountries={initialCountries}
+        />
       )}
     </div>
   );
