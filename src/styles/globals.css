@@ -125,3 +125,19 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * iOS Safari (and Chrome on iOS) auto-zoom into any focused input whose
+ * computed font-size is < 16px. Force at least 16px on mobile to suppress
+ * that zoom while keeping the design intent on desktop.
+ * Apple's well-documented behavior — applies to <input>, <textarea>, <select>.
+ * Keep `user-scalable` enabled (a11y) — fix the cause, not the symptom.
+ * ─────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select,
+  [contenteditable="true"] {
+    font-size: 16px !important;
+  }
+}

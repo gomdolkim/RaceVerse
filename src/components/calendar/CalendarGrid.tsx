@@ -17,21 +17,10 @@ import { countryName } from "@/lib/format/country";
 import { formatEventDate } from "@/lib/format/date";
 import { Link } from "@/lib/i18n/routing";
 import { writePrefsToDocument } from "@/lib/prefs/filter-prefs";
-import type {
-  CountryStats,
-  PrimaryType,
-  RaceWithNextEdition,
-} from "@/lib/supabase/types";
+import type { CountryStats, PrimaryType, RaceWithNextEdition } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import {
-  ArrowRight,
-  ChevronLeft,
-  ChevronRight,
-  HelpCircle,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, HelpCircle, Sparkles, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
@@ -61,6 +50,9 @@ const MONTH_NAMES_EN = [
   "Dec",
 ];
 
+/** Types shown in the calendar filter row (excludes hidden ones). */
+const FILTER_TYPES: PrimaryType[] = ["road_marathon", "trail", "ultra", "mixed", "virtual"];
+
 interface Props {
   /** Current month: 'YYYY-MM' */
   month: string;
@@ -76,6 +68,7 @@ interface Props {
   races: RaceWithNextEdition[];
   availableCountries: CountryStats[];
   initialSelectedCountries?: string[];
+  initialSelectedTypes?: string[];
 }
 
 export function CalendarGrid({
@@ -87,9 +80,11 @@ export function CalendarGrid({
   races,
   availableCountries,
   initialSelectedCountries = [],
+  initialSelectedTypes = [],
 }: Props) {
   const t = useTranslations("calendar");
   const tRaces = useTranslations("races");
+  const tType = useTranslations("primary_type");
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -106,25 +101,30 @@ export function CalendarGrid({
   ];
 
   const [selectedCountries, setSelectedCountries] = useState<string[]>(initialSelectedCountries);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(initialSelectedTypes);
   const [dialogDay, setDialogDay] = useState<string | null>(null);
 
-  // Persist country selection (cookie syncs with /races)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: derived join covers deps
+  // Persist filter selection (cookie syncs with /races)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: derived joins cover deps
   useEffect(() => {
     writePrefsToDocument({
       countries: selectedCountries.length ? selectedCountries : undefined,
+      types: selectedTypes.length ? (selectedTypes as PrimaryType[]) : undefined,
     });
-  }, [selectedCountries.join(",")]);
+  }, [selectedCountries.join(","), selectedTypes.join(",")]);
 
-  // Apply country filter to the month's races (client-side)
-  const filteredRaces =
-    selectedCountries.length === 0
-      ? races
-      : races.filter((r) => {
-          if (!r.country_code) return false;
-          const set = new Set(selectedCountries.map((c) => c.toUpperCase()));
-          return set.has(r.country_code.toUpperCase());
-        });
+  // Apply country + type filters to the month's races (client-side)
+  const countrySet = new Set(selectedCountries.map((c) => c.toUpperCase()));
+  const typeSet = new Set(selectedTypes);
+  const filteredRaces = races.filter((r) => {
+    if (selectedCountries.length > 0) {
+      if (!r.country_code || !countrySet.has(r.country_code.toUpperCase())) return false;
+    }
+    if (selectedTypes.length > 0) {
+      if (!typeSet.has(r.primary_type)) return false;
+    }
+    return true;
+  });
 
   // Build day → races map and grid cells from cursor month
   const [year, monthIdx] = month.split("-").map(Number);
@@ -192,6 +192,12 @@ export function CalendarGrid({
   const toggleCountry = (code: string) => {
     setSelectedCountries((prev) =>
       prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
+    );
+  };
+
+  const toggleType = (type: string) => {
+    setSelectedTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
     );
   };
 
