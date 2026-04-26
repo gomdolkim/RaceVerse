@@ -1,0 +1,11 @@
+{
+  "name": "RaceVerse",
+  "short_name": "RaceVerse",
+  "description": "전 세계 5,500+ 마라톤·트레일을 한 곳에서",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#16161d",
+  "theme_color": "#FF6B5B",
+  "lang": "ko",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
