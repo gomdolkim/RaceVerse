@@ -341,48 +341,49 @@ export function CalendarGrid({ races, availableCountries, initialSelectedCountri
                 tabIndex={hasRaces ? 0 : undefined}
                 aria-label={hasRaces ? t("open_day_view", { n: dayRaces.length }) : undefined}
                 className={cn(
-                  "min-h-[80px] sm:min-h-[120px] p-2 transition-colors",
+                  // taller min-height than before to give more touch room
+                  "relative flex min-h-[68px] flex-col p-2 sm:min-h-[96px] sm:p-3 transition-colors",
                   cell.inMonth ? "bg-surface-raised" : "bg-surface text-fg-subtle/50",
                   isToday(cell.date) && "ring-1 ring-inset ring-accent",
-                  hasRaces &&
-                    "cursor-pointer hover:bg-surface-overlay focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-bg",
+                  hasRaces
+                    ? "cursor-pointer hover:bg-accent/8 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:ring-offset-bg"
+                    : "",
                 )}
               >
-                <div className="flex items-center justify-between">
-                  <span
-                    className={cn(
-                      "text-xs tabular",
-                      isToday(cell.date) ? "text-accent font-semibold" : "text-fg-muted",
-                    )}
-                  >
-                    {cell.date.getDate()}
-                  </span>
-                  {hasRaces && (
-                    <span className="text-[10px] text-accent tabular">+{dayRaces.length}</span>
+                <span
+                  className={cn(
+                    "text-xs tabular",
+                    isToday(cell.date)
+                      ? "text-accent font-semibold"
+                      : cell.inMonth
+                        ? "text-fg-muted"
+                        : "text-fg-subtle",
                   )}
-                </div>
-                <ul className="mt-1.5 space-y-1">
-                  {dayRaces.slice(0, 3).map((r) => (
-                    <li key={r.id}>
-                      <Link
-                        href={`/races/${r.slug}`}
-                        onClick={(e) => e.stopPropagation()}
-                        className={cn(
-                          "block truncate rounded px-1.5 py-0.5 text-[11px] ring-1 ring-inset",
-                          TYPE_BADGE[r.primary_type],
-                        )}
-                      >
-                        <CountryFlag code={r.country_code} size={11} />{" "}
-                        <span className="ml-0.5">{r.canonical_name}</span>
-                      </Link>
-                    </li>
-                  ))}
-                  {dayRaces.length > 3 && (
-                    <li className="text-[10px] text-accent/80 pl-1.5 hover:text-accent">
-                      {t("more_count", { n: dayRaces.length - 3 })}
-                    </li>
-                  )}
-                </ul>
+                >
+                  {cell.date.getDate()}
+                </span>
+
+                {hasRaces && (
+                  <div className="flex flex-1 flex-col items-center justify-center gap-1">
+                    <span className="font-display text-2xl sm:text-3xl tabular text-accent leading-none">
+                      {dayRaces.length}
+                    </span>
+                    <span className="hidden sm:block text-[10px] uppercase tracking-wider text-fg-muted">
+                      {locale === "en" ? (dayRaces.length === 1 ? "race" : "races") : "대회"}
+                    </span>
+                    {/* Up to 4 country flags as a soft visual hint */}
+                    <div className="flex items-center gap-0.5">
+                      {uniqueFlags(dayRaces, 4).map((c) => (
+                        <CountryFlag key={c} code={c} size={11} />
+                      ))}
+                      {uniqueCountries(dayRaces) > 4 && (
+                        <span className="ml-0.5 text-[9px] text-fg-subtle tabular">
+                          +{uniqueCountries(dayRaces) - 4}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -391,14 +392,13 @@ export function CalendarGrid({ races, availableCountries, initialSelectedCountri
 
       {/* Day detail dialog — shows ALL races for the clicked day */}
       <Dialog open={dialogDay !== null} onOpenChange={(open) => !open && setDialogDay(null)}>
-        <DialogContent className="max-w-2xl p-0">
+        <DialogContent className="max-w-2xl p-0 sm:rounded-2xl">
           {dialogDay && (
             <DayDetailContent
               isoDate={dialogDay}
               races={monthRaces.get(dialogDay) ?? []}
               locale={locale}
               onClose={() => setDialogDay(null)}
-              t={t}
             />
           )}
         </DialogContent>
@@ -412,18 +412,20 @@ function DayDetailContent({
   races,
   locale,
   onClose,
-  t,
 }: {
   isoDate: string;
   races: RaceWithNextEdition[];
   locale: string;
   onClose: () => void;
-  t: ReturnType<typeof useTranslations<"calendar">>;
 }) {
+  const t = useTranslations("calendar");
+  const tType = useTranslations("primary_type");
+  const tDetail = useTranslations("race_detail");
+
   return (
     <>
-      <DialogHeader className="border-b border-border p-6">
-        <DialogTitle className="font-display text-2xl">
+      <DialogHeader className="border-b border-border p-5 sm:p-6">
+        <DialogTitle className="font-display text-xl sm:text-2xl">
           {t("day_dialog_title", {
             date: formatEventDate(isoDate, undefined, locale),
           })}
@@ -432,36 +434,36 @@ function DayDetailContent({
           {t("day_dialog_count", { n: races.length })}
         </DialogDescription>
       </DialogHeader>
-      <ScrollArea className="max-h-[60vh]">
+      <ScrollArea className="max-h-[65vh] sm:max-h-[70vh]">
         <ul className="divide-y divide-border">
           {races.map((r) => (
             <li key={r.id}>
               <Link
                 href={`/races/${r.slug}`}
                 onClick={onClose}
-                className="group flex items-start gap-3 px-6 py-4 transition-colors hover:bg-surface-raised"
+                className="group flex items-start gap-3 px-5 py-4 sm:px-6 transition-colors hover:bg-surface-raised active:bg-surface-overlay"
               >
-                <CountryFlag code={r.country_code} size={22} className="mt-0.5" />
+                <CountryFlag code={r.country_code} size={22} className="mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-fg group-hover:text-accent transition-colors line-clamp-2">
                     {r.canonical_name}
                   </p>
-                  <p className="mt-0.5 text-xs text-fg-muted tabular">
+                  <p className="mt-0.5 text-xs text-fg-muted tabular truncate">
                     {countryName(r.country_code, locale, r.country_name)}
                     {r.city && ` · ${r.city}`}
                   </p>
-                  <div className="mt-1.5 flex items-center gap-1.5">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     <span
                       className={cn(
                         "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] ring-1 ring-inset",
                         TYPE_BADGE[r.primary_type],
                       )}
                     >
-                      {r.primary_type.replace(/_/g, " ")}
+                      {tType(r.primary_type)}
                     </span>
                     {r.registration_url && (
                       <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-accent ring-1 ring-inset ring-accent/30">
-                        Open
+                        {tDetail("registration_open")}
                       </span>
                     )}
                   </div>
@@ -480,6 +482,24 @@ function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate(),
   ).padStart(2, "0")}`;
+}
+
+function uniqueCountries(races: RaceWithNextEdition[]): number {
+  const set = new Set<string>();
+  for (const r of races) if (r.country_code) set.add(r.country_code);
+  return set.size;
+}
+
+function uniqueFlags(races: RaceWithNextEdition[], take: number): string[] {
+  const set = new Set<string>();
+  const out: string[] = [];
+  for (const r of races) {
+    if (!r.country_code || set.has(r.country_code)) continue;
+    set.add(r.country_code);
+    out.push(r.country_code);
+    if (out.length >= take) break;
+  }
+  return out;
 }
 
 function isToday(d: Date): boolean {
