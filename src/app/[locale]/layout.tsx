@@ -5,6 +5,7 @@ import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { CommandPalette } from "@/components/command/CommandPalette";
+import { BottomNav } from "@/components/layout/BottomNav";
 import { Footer } from "@/components/layout/Footer";
 import { Nav } from "@/components/layout/Nav";
 import { Providers } from "@/components/providers/Providers";
@@ -31,10 +32,11 @@ export default async function LocaleLayout({
     <NextIntlClientProvider locale={locale} messages={messages}>
       <Providers>
         <Nav />
-        <main id="main" className="relative">
+        <main id="main" className="relative pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
           {children}
         </main>
         <Footer />
+        <BottomNav />
         <CommandPalette />
         <Analytics />
         <SpeedInsights />

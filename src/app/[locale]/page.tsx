@@ -49,7 +49,7 @@ export default async function HomePage({ params }: PageProps) {
 
   return (
     <>
-      <Hero />
+      <Hero raceCount={counts.races} locationCount={counts.geocoded} />
 
       <section className="container-wide -mt-10 sm:-mt-14 relative z-20">
         <StatsRow

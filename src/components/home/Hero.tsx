@@ -2,11 +2,19 @@ import { HeroBackdrop } from "@/components/layout/HeroBackdrop";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/lib/i18n/routing";
+import { formatNumber } from "@/lib/utils";
 import { ArrowRight, Map } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
-export function Hero() {
+interface HeroProps {
+  raceCount: number;
+  locationCount: number;
+}
+
+export function Hero({ raceCount, locationCount }: HeroProps) {
   const t = useTranslations("home");
+  const locale = useLocale();
+
   return (
     <section className="relative isolate overflow-hidden noise">
       <HeroBackdrop />
@@ -27,7 +35,10 @@ export function Hero() {
 
         <FadeIn delay={0.2}>
           <p className="mt-6 max-w-2xl text-pretty text-base text-fg-muted leading-relaxed sm:text-lg">
-            {t("hero_subtitle")}
+            {t("hero_subtitle", {
+              races: formatNumber(raceCount, locale),
+              locations: formatNumber(locationCount, locale),
+            })}
           </p>
         </FadeIn>
 
