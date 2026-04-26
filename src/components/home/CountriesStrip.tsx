@@ -1,10 +1,15 @@
+"use client";
+
 import { CountryFlag } from "@/components/race/CountryFlag";
-import { countryNameKo } from "@/lib/format/country";
+import { countryName } from "@/lib/format/country";
 import { Link } from "@/lib/i18n/routing";
 import type { CountryStats } from "@/lib/supabase/types";
 import { formatNumber } from "@/lib/utils";
+import { useLocale, useTranslations } from "next-intl";
 
 export function CountriesStrip({ countries }: { countries: CountryStats[] }) {
+  const locale = useLocale();
+  const t = useTranslations("home");
   return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
       {countries.map((c) => (
@@ -17,10 +22,10 @@ export function CountriesStrip({ countries }: { countries: CountryStats[] }) {
               <CountryFlag code={c.country_code} size={26} />
               <div className="min-w-0">
                 <p className="truncate font-medium">
-                  {countryNameKo(c.country_code, c.country_name)}
+                  {countryName(c.country_code, locale, c.country_name)}
                 </p>
                 <p className="text-xs text-fg-subtle tabular">
-                  {formatNumber(c.race_count)}개 대회
+                  {t("race_count", { count: formatNumber(c.race_count, locale) })}
                 </p>
               </div>
             </div>

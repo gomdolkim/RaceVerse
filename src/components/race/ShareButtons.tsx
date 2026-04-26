@@ -2,9 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Check, Copy, Share2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 export function ShareButtons({ url, title }: { url: string; title: string }) {
+  const t = useTranslations("race_detail");
   const [copied, setCopied] = useState(false);
 
   async function copyLink() {
@@ -33,11 +35,11 @@ export function ShareButtons({ url, title }: { url: string; title: string }) {
     <div className="flex flex-wrap gap-2">
       <Button size="sm" variant="outline" onClick={nativeShare}>
         <Share2 className="size-3.5" />
-        공유
+        {t("share")}
       </Button>
       <Button size="sm" variant="outline" onClick={copyLink}>
         {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-        {copied ? "복사됨" : "링크"}
+        {copied ? t("share_copied") : t("share_link")}
       </Button>
       <Button asChild size="sm" variant="outline">
         <a

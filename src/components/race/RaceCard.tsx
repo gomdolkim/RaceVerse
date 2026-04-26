@@ -1,16 +1,26 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { countryNameKo } from "@/lib/format/country";
-import { dCountdown, formatEventDate } from "@/lib/format/date";
-import { PRIMARY_TYPE_BADGE, PRIMARY_TYPE_LABEL_KO } from "@/lib/format/race";
+import { countryName } from "@/lib/format/country";
+import { dCountdown, shortDate } from "@/lib/format/date";
+import type { PrimaryType } from "@/lib/supabase/types";
 import { Link } from "@/lib/i18n/routing";
 import type { RaceWithNextEdition } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Calendar, MapPin, Ticket } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { CountryFlag } from "./CountryFlag";
-import { DistanceBadge } from "./DistanceBadge";
+
+const TYPE_BADGE: Record<PrimaryType, string> = {
+  road_marathon: "bg-orange-500/15 text-orange-300 ring-orange-500/30",
+  road_other: "bg-sky-500/15 text-sky-300 ring-sky-500/30",
+  trail: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
+  ultra: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
+  mixed: "bg-violet-500/15 text-violet-300 ring-violet-500/30",
+  virtual: "bg-cyan-500/15 text-cyan-300 ring-cyan-500/30",
+  unknown: "bg-zinc-500/15 text-zinc-300 ring-zinc-500/30",
+};
 
 export function RaceCard({
   race,
@@ -21,6 +31,10 @@ export function RaceCard({
   index?: number;
   compact?: boolean;
 }) {
+  const locale = useLocale();
+  const tCard = useTranslations("race_card");
+  const tType = useTranslations("primary_type");
+
   const dCount = dCountdown(race.event_date);
   const isUpcoming = race.event_date && new Date(race.event_date) >= new Date();
 
@@ -48,7 +62,7 @@ export function RaceCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-fg-muted tabular">
             <CountryFlag code={race.country_code} size={16} />
-            <span>{countryNameKo(race.country_code, race.country_name)}</span>
+            <span>{countryName(race.country_code, locale, race.country_name)}</span>
             {race.city && <span className="text-fg-subtle">·</span>}
             {race.city && <span className="truncate max-w-[10ch]">{race.city}</span>}
           </div>
@@ -61,8 +75,7 @@ export function RaceCard({
 
         <h3
           className={cn(
-            "mt-3 font-display tracking-tight text-fg group-hover:text-fg",
-            "line-clamp-2",
+            "mt-3 font-display tracking-tight text-fg group-hover:text-fg line-clamp-2",
             compact ? "text-base" : "text-lg",
           )}
         >
@@ -79,17 +92,17 @@ export function RaceCard({
           <span
             className={cn(
               "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset",
-              PRIMARY_TYPE_BADGE[race.primary_type],
+              TYPE_BADGE[race.primary_type],
             )}
           >
-            {PRIMARY_TYPE_LABEL_KO[race.primary_type]}
+            {tType(race.primary_type)}
           </span>
         </div>
 
         <div className="mt-4 flex items-center gap-3 text-xs text-fg-muted tabular border-t border-border/60 pt-3">
           <span className="inline-flex items-center gap-1">
             <Calendar className="size-3.5" />
-            {race.event_date ? formatEventDate(race.event_date, "yyyy.MM.dd") : "일정 미정"}
+            {race.event_date ? shortDate(race.event_date, locale) : tCard("tba_date")}
           </span>
           {race.region && (
             <span className="inline-flex items-center gap-1 truncate">
@@ -100,7 +113,7 @@ export function RaceCard({
           {race.registration_url && (
             <span className="ml-auto inline-flex items-center gap-1 text-accent">
               <Ticket className="size-3.5" />
-              등록
+              {tCard("register")}
             </span>
           )}
         </div>

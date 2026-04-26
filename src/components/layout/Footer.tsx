@@ -5,6 +5,9 @@ import { useTranslations } from "next-intl";
 
 export function Footer() {
   const t = useTranslations("footer");
+  const tn = useTranslations("nav");
+  const year = new Date().getFullYear();
+
   return (
     <footer className="border-t border-border bg-surface mt-24">
       <div className="container-wide grid gap-8 py-12 md:grid-cols-4">
@@ -16,47 +19,51 @@ export function Footer() {
         </div>
 
         <div>
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">탐색</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+            {t("section_explore")}
+          </h4>
           <ul className="mt-3 space-y-2 text-sm">
             <li>
               <Link className="text-fg-muted hover:text-fg" href="/races">
-                대회
+                {tn("races")}
               </Link>
             </li>
             <li>
               <Link className="text-fg-muted hover:text-fg" href="/calendar">
-                캘린더
+                {tn("calendar")}
               </Link>
             </li>
             <li>
               <Link className="text-fg-muted hover:text-fg" href="/map">
-                지도
+                {tn("map")}
               </Link>
             </li>
             <li>
               <Link className="text-fg-muted hover:text-fg" href="/countries">
-                국가별
+                {tn("countries")}
               </Link>
             </li>
             <li>
               <Link className="text-fg-muted hover:text-fg" href="/trail">
-                트레일
+                {tn("trail")}
               </Link>
             </li>
             <li>
               <Link className="text-fg-muted hover:text-fg" href="/insights">
-                인사이트
+                {tn("insights")}
               </Link>
             </li>
           </ul>
         </div>
 
         <div>
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">정보</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-fg-subtle">
+            {t("section_info")}
+          </h4>
           <ul className="mt-3 space-y-2 text-sm">
             <li>
               <Link className="text-fg-muted hover:text-fg" href="/about">
-                소개
+                {tn("about")}
               </Link>
             </li>
             <li>
@@ -84,9 +91,7 @@ export function Footer() {
         </div>
       </div>
       <div className="container-wide border-t border-border py-6">
-        <p className="text-xs text-fg-subtle tabular">
-          © {new Date().getFullYear()} RaceVerse. All rights reserved.
-        </p>
+        <p className="text-xs text-fg-subtle tabular">{t("rights", { year })}</p>
       </div>
     </footer>
   );

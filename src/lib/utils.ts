@@ -5,15 +5,23 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+function intlLocale(locale: string | undefined): string {
+  if (locale === "en") return "en-US";
+  if (locale === "ko") return "ko-KR";
+  return locale ?? "ko-KR";
+}
+
 export function formatNumber(n: number | null | undefined, locale = "ko-KR"): string {
   if (n === null || n === undefined) return "—";
-  return new Intl.NumberFormat(locale).format(n);
+  return new Intl.NumberFormat(intlLocale(locale)).format(n);
 }
 
 export function formatDistance(km: number | null | undefined, locale = "ko-KR"): string {
   if (km === null || km === undefined) return "—";
   if (km >= 1) {
-    return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(km)} km`;
+    return `${new Intl.NumberFormat(intlLocale(locale), {
+      maximumFractionDigits: 2,
+    }).format(km)} km`;
   }
   return `${Math.round(km * 1000)} m`;
 }
@@ -24,9 +32,10 @@ export function formatPrice(
   locale = "ko-KR",
 ): string {
   if (amount === null || amount === undefined) return "—";
-  if (!currency) return new Intl.NumberFormat(locale).format(amount);
+  const il = intlLocale(locale);
+  if (!currency) return new Intl.NumberFormat(il).format(amount);
   try {
-    return new Intl.NumberFormat(locale, {
+    return new Intl.NumberFormat(il, {
       style: "currency",
       currency,
       maximumFractionDigits: 0,

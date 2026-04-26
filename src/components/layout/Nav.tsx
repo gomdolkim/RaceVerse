@@ -45,7 +45,7 @@ export function Nav() {
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-accent focus:px-3 focus:py-2 focus:text-accent-fg"
       >
-        본문으로 건너뛰기
+        {t("skip_to_content")}
       </a>
       <div className="container-wide flex h-16 items-center justify-between gap-4">
         <div className="flex items-center gap-8">
@@ -91,7 +91,7 @@ export function Nav() {
           <ThemeSwitcher />
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden" aria-label="메뉴 열기">
+              <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t("menu_open")}>
                 <Menu className="size-5" />
               </Button>
             </SheetTrigger>

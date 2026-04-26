@@ -19,7 +19,7 @@ export function StatsRow({
     { label: t("stats_races"), value: races, suffix: "+" },
     { label: t("stats_locations"), value: geocoded, suffix: "+" },
     { label: t("stats_countries"), value: countries, suffix: "" },
-    { label: "등록 가능", value: withRegistration, suffix: "+" },
+    { label: t("stats_with_registration"), value: withRegistration, suffix: "+" },
   ];
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-px overflow-hidden rounded-2xl border border-border bg-border">

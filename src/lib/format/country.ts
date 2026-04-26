@@ -1,5 +1,4 @@
-// ISO 3166-1 alpha-2 → flag emoji + Korean name lookups.
-// For SVG flags we use the `country-flag-icons` package elsewhere.
+// ISO 3166-1 alpha-2 → flag emoji + localized country name lookups.
 
 export function flagEmoji(code: string | null | undefined): string {
   if (!code || code.length !== 2) return "🏳️";
@@ -68,7 +67,75 @@ const KO_NAMES: Record<string, string> = {
   QA: "카타르",
 };
 
-export function countryNameKo(code: string | null | undefined, fallback?: string | null): string {
+const EN_NAMES: Record<string, string> = {
+  KR: "South Korea",
+  US: "United States",
+  GB: "United Kingdom",
+  JP: "Japan",
+  CN: "China",
+  TW: "Taiwan",
+  HK: "Hong Kong",
+  SG: "Singapore",
+  TH: "Thailand",
+  VN: "Vietnam",
+  IN: "India",
+  ID: "Indonesia",
+  MY: "Malaysia",
+  PH: "Philippines",
+  AU: "Australia",
+  NZ: "New Zealand",
+  CA: "Canada",
+  MX: "Mexico",
+  BR: "Brazil",
+  AR: "Argentina",
+  CL: "Chile",
+  PE: "Peru",
+  CO: "Colombia",
+  FR: "France",
+  DE: "Germany",
+  IT: "Italy",
+  ES: "Spain",
+  PT: "Portugal",
+  CH: "Switzerland",
+  AT: "Austria",
+  NL: "Netherlands",
+  BE: "Belgium",
+  IE: "Ireland",
+  SE: "Sweden",
+  NO: "Norway",
+  FI: "Finland",
+  DK: "Denmark",
+  IS: "Iceland",
+  PL: "Poland",
+  CZ: "Czechia",
+  HU: "Hungary",
+  GR: "Greece",
+  TR: "Türkiye",
+  RU: "Russia",
+  UA: "Ukraine",
+  ZA: "South Africa",
+  EG: "Egypt",
+  MA: "Morocco",
+  KE: "Kenya",
+  ET: "Ethiopia",
+  AE: "United Arab Emirates",
+  IL: "Israel",
+  SA: "Saudi Arabia",
+  QA: "Qatar",
+};
+
+export function countryName(
+  code: string | null | undefined,
+  locale: "ko" | "en" | string = "ko",
+  fallback?: string | null,
+): string {
   if (!code) return fallback ?? "—";
-  return KO_NAMES[code.toUpperCase()] ?? fallback ?? code;
+  const upper = code.toUpperCase();
+  const map = locale === "en" ? EN_NAMES : KO_NAMES;
+  return map[upper] ?? fallback ?? upper;
+}
+
+/** @deprecated use countryName(code, locale, fallback) */
+export function countryNameKo(code: string | null | undefined, fallback?: string | null): string {
+  return countryName(code, "ko", fallback);
 }

@@ -3,12 +3,14 @@
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Monitor, Moon, Sun } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
 export function ThemeSwitcher() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const t = useTranslations("nav");
   useEffect(() => setMounted(true), []);
 
   if (!mounted) {
@@ -17,7 +19,10 @@ export function ThemeSwitcher() {
 
   const next = theme === "dark" ? "light" : theme === "light" ? "system" : "dark";
   const Icon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
-  const label = theme === "dark" ? "다크" : theme === "light" ? "라이트" : "시스템";
+  const label =
+    theme === "dark" ? t("theme_dark") : theme === "light" ? t("theme_light") : t("theme_system");
+  const nextLabel =
+    next === "dark" ? t("theme_dark") : next === "light" ? t("theme_light") : t("theme_system");
 
   return (
     <Tooltip>
@@ -25,7 +30,7 @@ export function ThemeSwitcher() {
         <Button
           variant="ghost"
           size="icon"
-          aria-label={`테마: ${label} (클릭해서 ${next}로 변경)`}
+          aria-label={t("theme_change_to", { label, next: nextLabel })}
           onClick={() => setTheme(next)}
         >
           <Icon className="size-4" />

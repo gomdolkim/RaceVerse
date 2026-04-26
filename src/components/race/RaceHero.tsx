@@ -1,21 +1,27 @@
+"use client";
+
 import { HeroBackdrop } from "@/components/layout/HeroBackdrop";
 import { Badge } from "@/components/ui/badge";
-import { countryNameKo } from "@/lib/format/country";
+import { countryName } from "@/lib/format/country";
 import { dCountdown, formatDateRange, formatEventDate } from "@/lib/format/date";
-import { PRIMARY_TYPE_LABEL_KO } from "@/lib/format/race";
 import type { RaceWithNextEdition } from "@/lib/supabase/types";
 import { Calendar, MapPin } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { CountryFlag } from "./CountryFlag";
 
 export function RaceHero({ race }: { race: RaceWithNextEdition }) {
+  const locale = useLocale();
+  const t = useTranslations("race_detail");
+  const tType = useTranslations("primary_type");
   const countdown = dCountdown(race.event_date);
+
   return (
     <section className="relative isolate overflow-hidden border-b border-border noise">
       <HeroBackdrop />
       <div className="container-wide relative z-10 pt-12 pb-12 sm:pt-20 sm:pb-16">
         <div className="flex flex-wrap items-center gap-2 text-sm text-fg-muted tabular">
           <CountryFlag code={race.country_code} size={20} />
-          <span>{countryNameKo(race.country_code, race.country_name)}</span>
+          <span>{countryName(race.country_code, locale, race.country_name)}</span>
           {race.region && <span className="text-fg-subtle">·</span>}
           {race.region && <span>{race.region}</span>}
           {race.city && <span className="text-fg-subtle">·</span>}
@@ -27,7 +33,7 @@ export function RaceHero({ race }: { race: RaceWithNextEdition }) {
         </h1>
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
-          <Badge variant="accent">{PRIMARY_TYPE_LABEL_KO[race.primary_type]}</Badge>
+          <Badge variant="accent">{tType(race.primary_type)}</Badge>
           {countdown && (
             <Badge variant="outline" className="tabular">
               {countdown}
@@ -45,8 +51,8 @@ export function RaceHero({ race }: { race: RaceWithNextEdition }) {
             <Calendar className="size-4 text-fg-subtle" />
             <dd className="text-fg tabular">
               {race.event_date
-                ? formatDateRange(race.event_date, race.event_end_date)
-                : "일정 미정"}
+                ? formatDateRange(race.event_date, race.event_end_date, locale)
+                : t("tba_date")}
             </dd>
           </div>
           {race.venue_name && (
@@ -57,8 +63,10 @@ export function RaceHero({ race }: { race: RaceWithNextEdition }) {
           )}
           {race.first_held_year && (
             <div className="flex items-center gap-2 text-fg-muted">
-              <span className="text-fg-subtle">시작</span>
-              <dd className="text-fg tabular">{race.first_held_year}년</dd>
+              <span className="text-fg-subtle">{t("first_held")}</span>
+              <dd className="text-fg tabular">
+                {t("first_held_value", { year: race.first_held_year })}
+              </dd>
             </div>
           )}
         </dl>
@@ -69,10 +77,9 @@ export function RaceHero({ race }: { race: RaceWithNextEdition }) {
           </p>
         )}
 
-        {/* anchor for SEO accessibility */}
         <p className="sr-only">
-          {race.canonical_name} - {countryNameKo(race.country_code, race.country_name)} -{" "}
-          {race.event_date ? formatEventDate(race.event_date) : "일정 미정"}
+          {race.canonical_name} - {countryName(race.country_code, locale, race.country_name)}{" "}
+          - {race.event_date ? formatEventDate(race.event_date, undefined, locale) : t("tba_date")}
         </p>
       </div>
     </section>
