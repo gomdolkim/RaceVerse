@@ -1,5 +1,6 @@
 import "server-only";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { listCountries } from "./countries";
 
 export interface MonthlyDistribution {
   /** 'YYYY-MM' */
@@ -169,54 +170,10 @@ export async function getDistanceDistribution(): Promise<DistanceBucket[]> {
 }
 
 /**
- * Top countries — aggregated DIRECTLY from races_public so it's correct
- * regardless of whether `country_stats` view was re-applied to the DB.
- * Sorted by total race count descending.
+ * Top countries — delegates to `listCountries` so /insights, /countries,
+ * /races filters, /calendar filters, and the home strip ALL agree.
  */
 export async function getTopCountries(limit = 12): Promise<CountryAgg[]> {
-  const supabase = await createSupabaseServer();
-  type Row = {
-    country_code: string | null;
-    country_name: string | null;
-    primary_type: string;
-    latitude: number | null;
-  };
-
-  const aggregates = new Map<string, CountryAgg>();
-  let offset = 0;
-  while (offset < HARD_CAP) {
-    const { data, error } = await supabase
-      .from("races_public")
-      .select("country_code, country_name, primary_type, latitude")
-      .eq("is_active", true)
-      .not("primary_type", "in", HIDDEN_TYPES_PG)
-      .not("country_code", "is", null)
-      .range(offset, offset + PAGE - 1);
-    if (error) throw error;
-    const batch = (data ?? []) as Row[];
-    for (const r of batch) {
-      if (!r.country_code) continue;
-      const code = r.country_code.toUpperCase();
-      const existing = aggregates.get(code) ?? {
-        country_code: code,
-        country_name: r.country_name,
-        race_count: 0,
-        marathon_count: 0,
-        trail_count: 0,
-        geocoded_count: 0,
-      };
-      existing.race_count++;
-      if (r.primary_type === "road_marathon") existing.marathon_count++;
-      if (r.primary_type === "trail" || r.primary_type === "ultra") existing.trail_count++;
-      if (r.latitude != null) existing.geocoded_count++;
-      aggregates.set(code, existing);
-    }
-    if (batch.length < PAGE) break;
-    offset += PAGE;
-  }
-
-  return [...aggregates.values()]
-    .filter((c) => c.race_count > 0)
-    .sort((a, b) => b.race_count - a.race_count)
-    .slice(0, limit);
+  const all = await listCountries();
+  return all.slice(0, limit);
 }

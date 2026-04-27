@@ -1,8 +1,23 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
-import type { RaceWithNextEdition } from "@/lib/supabase/types";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
+
+const HIDDEN_TYPES_PG = "(unknown,road_other)";
+const PAGE = 1000;
+const HARD_CAP = 8000;
+
+interface MapRow {
+  id: string;
+  slug: string;
+  canonical_name: string;
+  country_code: string | null;
+  city: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  primary_type: string;
+  event_date: string | null;
+}
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -14,21 +29,37 @@ export async function GET(req: Request) {
   }
 
   const supabase = await createSupabaseServer();
-  const { data, error } = await supabase.rpc("races_in_bbox", {
-    west,
-    south,
-    east,
-    north,
-    limit_count: 800,
-  } as any);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const rows = ((data ?? []) as RaceWithNextEdition[]).filter(
-    (r) => r.primary_type !== "unknown" && r.event_date != null,
-  );
+  // Slim direct view query (no RPC). Paginated so the world view returns
+  // every geocoded race, not just the first 800. Slim SELECT keeps payload
+  // small enough that ~5,500 rows × 9 fields stays under ~1 MB.
+  const all: MapRow[] = [];
+  let offset = 0;
+  while (offset < HARD_CAP) {
+    const { data, error } = await supabase
+      .from("race_with_next_edition")
+      .select(
+        "id, slug, canonical_name, country_code, city, latitude, longitude, primary_type, event_date",
+      )
+      .not("primary_type", "in", HIDDEN_TYPES_PG)
+      .not("event_date", "is", null)
+      .not("latitude", "is", null)
+      .not("longitude", "is", null)
+      .gte("latitude", south)
+      .lte("latitude", north)
+      .gte("longitude", west)
+      .lte("longitude", east)
+      .range(offset, offset + PAGE - 1);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const batch = (data ?? []) as MapRow[];
+    all.push(...batch);
+    if (batch.length < PAGE) break;
+    offset += PAGE;
+  }
+
   return NextResponse.json(
     {
-      data: rows.map((r) => ({
+      data: all.map((r) => ({
         id: r.id,
         slug: r.slug,
         name: r.canonical_name,
@@ -40,8 +71,6 @@ export async function GET(req: Request) {
         event_date: r.event_date,
       })),
     },
-    {
-      headers: { "cache-control": "public, max-age=120, s-maxage=120" },
-    },
+    { headers: { "cache-control": "public, max-age=120, s-maxage=120" } },
   );
 }
