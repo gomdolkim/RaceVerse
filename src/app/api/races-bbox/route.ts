@@ -19,20 +19,17 @@ interface MapRow {
   event_date: string | null;
 }
 
-export async function GET(req: Request) {
-  const url = new URL(req.url);
-  const bbox = url.searchParams.get("bbox");
-  if (!bbox) return NextResponse.json({ data: [] });
-  const [west, south, east, north] = bbox.split(",").map(Number);
-  if ([west, south, east, north].some(Number.isNaN)) {
-    return NextResponse.json({ error: "invalid bbox" }, { status: 400 });
-  }
+interface BBox {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
 
-  const supabase = await createSupabaseServer();
-
-  // Slim direct view query (no RPC). Paginated so the world view returns
-  // every geocoded race, not just the first 800. Slim SELECT keeps payload
-  // small enough that ~5,500 rows × 9 fields stays under ~1 MB.
+async function fetchBbox(
+  supabase: Awaited<ReturnType<typeof createSupabaseServer>>,
+  bbox: BBox,
+): Promise<MapRow[]> {
   const all: MapRow[] = [];
   let offset = 0;
   while (offset < HARD_CAP) {
@@ -45,21 +42,57 @@ export async function GET(req: Request) {
       .not("event_date", "is", null)
       .not("latitude", "is", null)
       .not("longitude", "is", null)
-      .gte("latitude", south)
-      .lte("latitude", north)
-      .gte("longitude", west)
-      .lte("longitude", east)
+      .gte("latitude", bbox.south)
+      .lte("latitude", bbox.north)
+      .gte("longitude", bbox.west)
+      .lte("longitude", bbox.east)
       .range(offset, offset + PAGE - 1);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) throw new Error(error.message);
     const batch = (data ?? []) as MapRow[];
     all.push(...batch);
     if (batch.length < PAGE) break;
     offset += PAGE;
   }
+  return all;
+}
+
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const bbox = url.searchParams.get("bbox");
+  if (!bbox) return NextResponse.json({ data: [] });
+  const [west, south, east, north] = bbox.split(",").map(Number);
+  if ([west, south, east, north].some(Number.isNaN)) {
+    return NextResponse.json({ error: "invalid bbox" }, { status: 400 });
+  }
+
+  const supabase = await createSupabaseServer();
+
+  // Antimeridian crossing: when the map is panned across the 180°/-180°
+  // boundary, MapLibre reports west > east. We split into two queries
+  // (eastern hemisphere up to +180, western hemisphere from -180) and
+  // merge — otherwise PostgREST returns zero rows because the lat/lon
+  // BETWEEN check is empty.
+  let rows: MapRow[];
+  try {
+    if (west > east) {
+      const [eastSide, westSide] = await Promise.all([
+        fetchBbox(supabase, { west, east: 180, south, north }),
+        fetchBbox(supabase, { west: -180, east, south, north }),
+      ]);
+      rows = [...eastSide, ...westSide];
+    } else {
+      rows = await fetchBbox(supabase, { west, east, south, north });
+    }
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "fetch failed" },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json(
     {
-      data: all.map((r) => ({
+      data: rows.map((r) => ({
         id: r.id,
         slug: r.slug,
         name: r.canonical_name,

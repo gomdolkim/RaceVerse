@@ -35,7 +35,11 @@ export function InterestsSection({ initialInterests, availableCountries, races }
   const [selected, setSelected] = useState<string[]>(savedInterests);
   const [editing, setEditing] = useState(false);
 
-  const showPicker = isFirstVisit || editing;
+  // Keep showing the picker while the post-save router refresh is pending.
+  // Without this, savedInterests would briefly be the OLD value during the
+  // transition and the section would either flash empty (first save) or
+  // flash the old race list before re-rendering.
+  const showPicker = isFirstVisit || editing || pending;
 
   /**
    * Sync interests → filter cookie so /races and /calendar pre-filter to
@@ -53,10 +57,12 @@ export function InterestsSection({ initialInterests, availableCountries, races }
   function save() {
     writeInterestsToDocument(selected);
     syncToFilterPrefs(selected);
-    setEditing(false);
     startTransition(() => {
       router.refresh();
     });
+    // Defer setEditing(false) — `pending` keeps the picker visible until the
+    // server re-render completes, so the UI doesn't flash the old state.
+    setEditing(false);
   }
 
   function skip() {

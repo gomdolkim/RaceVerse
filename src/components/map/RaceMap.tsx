@@ -121,6 +121,8 @@ export function RaceMap({ onSelect }: { onSelect?: (race: MapRace) => void }) {
         });
       };
 
+      const MAX_RACES_IN_MEMORY = 5000;
+
       const fetchBbox = async () => {
         const bounds = map.getBounds();
         const bbox = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
@@ -129,7 +131,17 @@ export function RaceMap({ onSelect }: { onSelect?: (race: MapRace) => void }) {
           const json = await res.json();
           const races: MapRace[] = json.data ?? [];
           for (const r of races) {
-            if (r.id) allRaces.current.set(r.id, r);
+            if (r.id) {
+              // Re-insert keeps Map insertion order — newest at the end.
+              allRaces.current.delete(r.id);
+              allRaces.current.set(r.id, r);
+            }
+          }
+          // Cap memory: when the user pans extensively, evict oldest entries
+          // so the cluster doesn't slow down and memory doesn't grow forever.
+          if (allRaces.current.size > MAX_RACES_IN_MEMORY) {
+            const entries = [...allRaces.current.entries()];
+            allRaces.current = new Map(entries.slice(-MAX_RACES_IN_MEMORY));
           }
           if (clusterRef.current) {
             clusterRef.current.load(

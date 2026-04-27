@@ -94,6 +94,9 @@ export function CountryPicker({ available, selected, onToggle, onClear }: Props)
 
   if (isMobile) {
     // Mobile: full-width bottom sheet — large touch targets, native-feeling.
+    // Don't auto-focus the search input: that opens the soft keyboard which
+    // hides the bottom action bar (the user can't see the Apply button until
+    // they dismiss the keyboard). Tapping the search input still works.
     return (
       <Sheet
         open={open}
@@ -103,18 +106,20 @@ export function CountryPicker({ available, selected, onToggle, onClear }: Props)
         }}
       >
         <SheetTrigger asChild>{trigger}</SheetTrigger>
-        <SheetContent side="bottom" className="flex h-[85vh] flex-col rounded-t-2xl p-0">
+        <SheetContent
+          side="bottom"
+          className="flex h-[85dvh] flex-col rounded-t-2xl p-0"
+          // env(keyboard-inset-height) on iOS 17+ shrinks the visual viewport
+          // so the action bar sits above the keyboard. Falls back to 0 on
+          // browsers that don't support it.
+          style={{ paddingBottom: "env(keyboard-inset-height, 0px)" }}
+        >
           <SheetHeader className="border-b border-border p-4">
             <SheetTitle className="font-display text-xl">{t("filter_country")}</SheetTitle>
             <SheetDescription className="text-xs">
               {selected.length > 0 ? t("results_count", { count: selected.length }) : t("subtitle")}
             </SheetDescription>
-            <SearchBox
-              value={query}
-              onChange={setQuery}
-              placeholder={tNav("search_placeholder")}
-              autoFocus
-            />
+            <SearchBox value={query} onChange={setQuery} placeholder={tNav("search_placeholder")} />
           </SheetHeader>
           <ScrollArea className="flex-1">
             <div className="p-2 pb-24">{list}</div>
