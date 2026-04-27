@@ -2,6 +2,7 @@
 
 import { CountryPicker } from "@/components/filter/CountryPicker";
 import { CountryFlag } from "@/components/race/CountryFlag";
+import { useSavedRaces } from "@/components/race/SaveButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +21,15 @@ import { readPrefsFromDocument, writePrefsToDocument } from "@/lib/prefs/filter-
 import type { CountryStats, PrimaryType, RaceWithNextEdition } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { ArrowRight, ChevronLeft, ChevronRight, HelpCircle, Sparkles, X } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  HelpCircle,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
@@ -103,6 +112,10 @@ export function CalendarGrid({
   const [selectedCountries, setSelectedCountries] = useState<string[]>(initialSelectedCountries);
   const [selectedTypes, setSelectedTypes] = useState<string[]>(initialSelectedTypes);
   const [dialogDay, setDialogDay] = useState<string | null>(null);
+
+  // Visual hint: saved races get a heart marker on their day cell.
+  const { ids: savedIds } = useSavedRaces();
+  const savedSet = new Set(savedIds);
 
   // Persist filter selection (cookie syncs with /races). Merge with existing
   // prefs so we don't wipe other fields (dateFrom, onlyWithRegistration, ...).
@@ -369,6 +382,7 @@ export function CalendarGrid({
             const isoKey = isoDate(cell.date);
             const dayRaces = monthRaces.get(isoKey) ?? [];
             const hasRaces = dayRaces.length > 0;
+            const savedCount = dayRaces.reduce((n, r) => (savedSet.has(r.id) ? n + 1 : n), 0);
             return (
               <div
                 key={isoKey}
@@ -392,18 +406,26 @@ export function CalendarGrid({
                     : "",
                 )}
               >
-                <span
-                  className={cn(
-                    "text-xs tabular",
-                    isToday(cell.date)
-                      ? "text-accent font-semibold"
-                      : cell.inMonth
-                        ? "text-fg-muted"
-                        : "text-fg-subtle",
+                <div className="flex items-start justify-between gap-1">
+                  <span
+                    className={cn(
+                      "text-xs tabular",
+                      isToday(cell.date)
+                        ? "text-accent font-semibold"
+                        : cell.inMonth
+                          ? "text-fg-muted"
+                          : "text-fg-subtle",
+                    )}
+                  >
+                    {cell.date.getDate()}
+                  </span>
+                  {savedCount > 0 && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-accent/15 px-1 py-px text-[9px] tabular text-accent ring-1 ring-inset ring-accent/30">
+                      <Heart className="size-2.5" fill="currentColor" />
+                      {savedCount}
+                    </span>
                   )}
-                >
-                  {cell.date.getDate()}
-                </span>
+                </div>
 
                 {hasRaces && (
                   <div className="flex flex-1 flex-col items-center justify-center gap-1">

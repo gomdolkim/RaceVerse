@@ -1,6 +1,7 @@
 "use client";
 
 import { Wordmark } from "@/components/brand/Wordmark";
+import { useSavedRaces } from "@/components/race/SaveButton";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Link, usePathname } from "@/lib/i18n/routing";
@@ -9,7 +10,23 @@ import { Menu, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { LocaleSwitcher } from "./LocaleSwitcher";
+import { SavedNavLink } from "./SavedNavLink";
 import { ThemeSwitcher } from "./ThemeSwitcher";
+
+function SavedMobileLabel() {
+  const t = useTranslations("saved");
+  const { ids, ready } = useSavedRaces();
+  return (
+    <span className="inline-flex items-center gap-2">
+      {t("nav")}
+      {ready && ids.length > 0 && (
+        <span className="rounded-full bg-accent/20 px-2 py-0.5 text-[10px] tabular text-accent">
+          {ids.length}
+        </span>
+      )}
+    </span>
+  );
+}
 
 const NAV_ITEMS = [
   { href: "/races", label: "races" },
@@ -87,6 +104,7 @@ export function Nav() {
               </kbd>
             </Link>
           </Button>
+          <SavedNavLink />
           <LocaleSwitcher />
           <ThemeSwitcher />
           <Sheet>
@@ -102,23 +120,26 @@ export function Nav() {
                 </SheetTitle>
               </SheetHeader>
               <nav aria-label="Mobile" className="flex flex-col gap-1 p-4 pt-0">
-                {NAV_ITEMS.map((item) => {
-                  const active = pathname.startsWith(item.href);
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        "rounded-lg px-3 py-3 text-base transition-colors",
-                        active
-                          ? "bg-accent/15 text-accent"
-                          : "text-fg-muted hover:bg-surface-raised hover:text-fg",
-                      )}
-                    >
-                      {t(item.label)}
-                    </Link>
-                  );
-                })}
+                {[...NAV_ITEMS, { href: "/saved" as const, label: "saved_nav" as const }].map(
+                  (item) => {
+                    const active = pathname.startsWith(item.href);
+                    const label = item.label === "saved_nav" ? undefined : t(item.label as never);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={cn(
+                          "rounded-lg px-3 py-3 text-base transition-colors",
+                          active
+                            ? "bg-accent/15 text-accent"
+                            : "text-fg-muted hover:bg-surface-raised hover:text-fg",
+                        )}
+                      >
+                        {label ?? <SavedMobileLabel />}
+                      </Link>
+                    );
+                  },
+                )}
               </nav>
             </SheetContent>
           </Sheet>

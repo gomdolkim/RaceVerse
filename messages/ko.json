@@ -238,6 +238,26 @@
     "tba": "미정",
     "skip_to_content": "본문으로 건너뛰기"
   },
+  "saved": {
+    "save": "저장",
+    "save_short": "저장",
+    "saved": "저장됨",
+    "remove": "저장 해제",
+    "title": "저장한 대회",
+    "subtitle": "관심 가는 대회를 한 곳에서 모아보세요",
+    "empty_title": "저장한 대회가 없습니다",
+    "empty_desc": "대회 카드의 하트 아이콘을 눌러 저장하세요. 브라우저를 종료해도 유지됩니다.",
+    "empty_cta": "대회 둘러보기",
+    "count_label": "{count}개 저장됨",
+    "clear_all": "모두 삭제",
+    "share": "공유 링크 복사",
+    "share_copied": "링크 복사됨",
+    "shared_view_title": "공유받은 대회",
+    "shared_view_desc": "친구가 공유한 대회 목록입니다. 본인 저장 목록과는 다릅니다.",
+    "shared_save_all": "모두 저장하기",
+    "nav": "저장한 대회",
+    "tooltip": "저장한 대회"
+  },
   "footer": {
     "made_with": "전 세계 러너를 위해 만들어졌습니다",
     "data_attribution": "데이터 출처: worldsmarathons, UTMB, ITRA",

@@ -236,6 +236,30 @@ export async function getLatestUpcomingMonth(): Promise<string | null> {
   return (data.event_date as string).slice(0, 7);
 }
 
+/**
+ * Fetch races by id list (for /saved page). Preserves caller's id ordering
+ * so the user's "newest saved first" ordering survives the round-trip.
+ */
+export async function listRacesByIds(ids: string[]): Promise<RaceWithNextEdition[]> {
+  if (!ids.length) return [];
+  const supabase = await createSupabaseServer();
+  // Chunk to stay safely under PostgREST's URL length limit on .in()
+  const CHUNK = 200;
+  const fetched: RaceWithNextEdition[] = [];
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const chunk = ids.slice(i, i + CHUNK);
+    const { data, error } = await supabase
+      .from("race_with_next_edition")
+      .select(RWE_SELECT)
+      .in("id", chunk);
+    if (error) throw error;
+    fetched.push(...((data ?? []) as RaceWithNextEdition[]));
+  }
+  // Re-order to match the input ids list. Drop any ids that no longer exist.
+  const byId = new Map(fetched.map((r) => [r.id, r]));
+  return ids.map((id) => byId.get(id)).filter((r): r is RaceWithNextEdition => r !== undefined);
+}
+
 export async function getDatasetCounts(): Promise<{
   races: number;
   geocoded: number;

@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { Calendar, MapPin, Ticket } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { CountryFlag } from "./CountryFlag";
+import { SaveButton } from "./SaveButton";
 
 const TYPE_BADGE: Record<PrimaryType, string> = {
   road_marathon: "bg-orange-500/15 text-orange-300 ring-orange-500/30",
@@ -48,8 +49,9 @@ export function RaceCard({
         ease: [0.16, 1, 0.3, 1],
       }}
       whileHover={{ y: -3 }}
-      className="group"
+      className="group relative"
     >
+      <SaveButton raceId={race.id} variant="sm" stopPropagation />
       <Link
         href={`/races/${race.slug}`}
         className={cn(

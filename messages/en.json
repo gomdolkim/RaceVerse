@@ -238,6 +238,26 @@
     "tba": "TBA",
     "skip_to_content": "Skip to content"
   },
+  "saved": {
+    "save": "Save",
+    "save_short": "Save",
+    "saved": "Saved",
+    "remove": "Remove from saved",
+    "title": "Saved races",
+    "subtitle": "Your bookmarked races, all in one place",
+    "empty_title": "No saved races yet",
+    "empty_desc": "Tap the heart on any race card to save it. Persists across browser sessions.",
+    "empty_cta": "Browse races",
+    "count_label": "{count} saved",
+    "clear_all": "Clear all",
+    "share": "Copy share link",
+    "share_copied": "Link copied",
+    "shared_view_title": "Shared races",
+    "shared_view_desc": "Races a friend shared with you. Different from your own saved list.",
+    "shared_save_all": "Save all to my list",
+    "nav": "Saved",
+    "tooltip": "Saved races"
+  },
   "footer": {
     "made_with": "Made for runners around the world",
     "data_attribution": "Data sources: worldsmarathons, UTMB, ITRA",

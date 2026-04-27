@@ -9,6 +9,7 @@ import type { RaceWithNextEdition } from "@/lib/supabase/types";
 import { Calendar, ExternalLink, MapPin } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { CountryFlag } from "./CountryFlag";
+import { SaveButton } from "./SaveButton";
 
 export function RaceHero({ race }: { race: RaceWithNextEdition }) {
   const locale = useLocale();
@@ -87,6 +88,7 @@ export function RaceHero({ race }: { race: RaceWithNextEdition }) {
               {race.edition_year}
             </Badge>
           )}
+          <SaveButton raceId={race.id} variant="pill" className="ml-1" />
         </div>
 
         {/*
