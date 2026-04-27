@@ -51,7 +51,6 @@ export function RaceCard({
       whileHover={{ y: -3 }}
       className="group relative"
     >
-      <SaveButton raceId={race.id} variant="sm" stopPropagation />
       <Link
         href={`/races/${race.slug}`}
         className={cn(
@@ -61,18 +60,23 @@ export function RaceCard({
           compact ? "p-4" : "p-5",
         )}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-fg-muted tabular">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs text-fg-muted tabular min-w-0">
             <CountryFlag code={race.country_code} size={16} />
-            <span>{countryName(race.country_code, locale, race.country_name)}</span>
+            <span className="truncate">
+              {countryName(race.country_code, locale, race.country_name)}
+            </span>
             {race.city && <span className="text-fg-subtle">·</span>}
             {race.city && <span className="truncate max-w-[10ch]">{race.city}</span>}
           </div>
-          {isUpcoming && dCount && (
-            <Badge variant="accent" className="tabular shrink-0">
-              {dCount}
-            </Badge>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            {isUpcoming && dCount && (
+              <Badge variant="accent" className="tabular">
+                {dCount}
+              </Badge>
+            )}
+            <SaveButton raceId={race.id} variant="sm" stopPropagation />
+          </div>
         </div>
 
         <h3

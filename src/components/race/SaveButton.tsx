@@ -111,7 +111,8 @@ export function SaveButton({ raceId, variant = "sm", stopPropagation = false, cl
     );
   }
 
-  // sm — corner of card. Big enough to tap on mobile (~36px square).
+  // sm — inline button intended to sit next to other badges in a row.
+  // Slightly oversized hit target (~32px) but visually compact.
   return (
     <button
       type="button"
@@ -120,13 +121,10 @@ export function SaveButton({ raceId, variant = "sm", stopPropagation = false, cl
       aria-label={label}
       title={label}
       className={cn(
-        "absolute right-2 top-2 z-10 inline-flex size-9 items-center justify-center rounded-full transition-all",
-        "bg-surface/80 backdrop-blur-md ring-1 ring-inset",
+        "inline-flex size-7 shrink-0 items-center justify-center rounded-full transition-colors",
         effectiveSaved
-          ? "ring-accent/40 text-accent"
-          : "ring-border text-fg-muted opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
-        // Always show on mobile so users find it without hover.
-        "max-md:opacity-100",
+          ? "text-accent hover:bg-accent/10"
+          : "text-fg-subtle hover:bg-surface-overlay hover:text-fg",
         className,
       )}
     >
