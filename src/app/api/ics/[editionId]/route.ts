@@ -19,7 +19,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ editionId: str
     return NextResponse.json({ error: "Race has no scheduled date" }, { status: 400 });
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://raceverse.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://race-verse.vercel.app";
   const ics = buildIcs(data, siteUrl);
   return new NextResponse(ics, {
     status: 200,

@@ -4,8 +4,9 @@ import { HeroBackdrop } from "@/components/layout/HeroBackdrop";
 import { Badge } from "@/components/ui/badge";
 import { countryName } from "@/lib/format/country";
 import { dCountdown, formatDateRange, formatEventDate } from "@/lib/format/date";
+import { googleMapsUrl } from "@/lib/format/maps";
 import type { RaceWithNextEdition } from "@/lib/supabase/types";
-import { Calendar, MapPin } from "lucide-react";
+import { Calendar, ExternalLink, MapPin } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { CountryFlag } from "./CountryFlag";
 
@@ -15,18 +16,62 @@ export function RaceHero({ race }: { race: RaceWithNextEdition }) {
   const tType = useTranslations("primary_type");
   const countdown = dCountdown(race.event_date);
 
+  const mapsUrl = googleMapsUrl({
+    latitude: race.latitude,
+    longitude: race.longitude,
+    venue_name: race.venue_name,
+    city: race.city,
+    region: race.region,
+    country_name: race.country_name,
+    country_code: race.country_code,
+  });
+
+  // Location chip text — venue > city > region > country (most specific wins)
+  const locationParts = [
+    countryName(race.country_code, locale, race.country_name),
+    race.region,
+    race.city,
+  ].filter(Boolean);
+
+  const LocationLink = ({
+    children,
+    className = "",
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) =>
+    mapsUrl ? (
+      <a
+        href={mapsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`group inline-flex items-center gap-1 rounded-md transition-colors hover:text-accent ${className}`}
+        aria-label={t("open_in_maps")}
+      >
+        {children}
+      </a>
+    ) : (
+      <span className={className}>{children}</span>
+    );
+
   return (
     <section className="relative isolate overflow-hidden border-b border-border noise">
       <HeroBackdrop />
       <div className="container-wide relative z-10 pt-12 pb-12 sm:pt-20 sm:pb-16">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-fg-muted tabular">
+        <LocationLink className="text-sm text-fg-muted tabular">
           <CountryFlag code={race.country_code} size={20} />
-          <span>{countryName(race.country_code, locale, race.country_name)}</span>
-          {race.region && <span className="text-fg-subtle">·</span>}
-          {race.region && <span>{race.region}</span>}
-          {race.city && <span className="text-fg-subtle">·</span>}
-          {race.city && <span>{race.city}</span>}
-        </div>
+          <span className="ml-1">
+            {locationParts.map((p, i) => (
+              <span key={`${p}-${i}`}>
+                {i > 0 && <span className="text-fg-subtle"> · </span>}
+                {p}
+              </span>
+            ))}
+          </span>
+          {mapsUrl && (
+            <ExternalLink className="size-3 opacity-0 transition-opacity group-hover:opacity-70" />
+          )}
+        </LocationLink>
 
         <h1 className="mt-3 max-w-4xl font-display text-balance text-4xl font-semibold leading-tight tracking-tight sm:text-5xl md:text-6xl">
           {race.canonical_name}
@@ -56,10 +101,10 @@ export function RaceHero({ race }: { race: RaceWithNextEdition }) {
             </dd>
           </div>
           {race.venue_name && (
-            <div className="flex items-center gap-2 text-fg-muted">
-              <MapPin className="size-4 text-fg-subtle" />
+            <LocationLink>
+              <MapPin className="size-4 text-fg-subtle group-hover:text-accent" />
               <dd className="text-fg">{race.venue_name}</dd>
-            </div>
+            </LocationLink>
           )}
           {race.first_held_year && (
             <div className="flex items-center gap-2 text-fg-muted">
@@ -68,6 +113,14 @@ export function RaceHero({ race }: { race: RaceWithNextEdition }) {
                 {t("first_held_value", { year: race.first_held_year })}
               </dd>
             </div>
+          )}
+          {/* Always-visible "Open in Maps" CTA when we have any locatable data */}
+          {mapsUrl && (
+            <LocationLink className="rounded-full border border-border bg-surface/40 px-3 py-1 text-fg-muted hover:bg-surface-overlay hover:border-accent/40 hover:text-accent">
+              <MapPin className="size-3.5" />
+              <span className="text-xs">{t("open_in_maps")}</span>
+              <ExternalLink className="size-3 opacity-60" />
+            </LocationLink>
           )}
         </dl>
 
@@ -78,8 +131,9 @@ export function RaceHero({ race }: { race: RaceWithNextEdition }) {
         )}
 
         <p className="sr-only">
-          {race.canonical_name} - {countryName(race.country_code, locale, race.country_name)}{" "}
-          - {race.event_date ? formatEventDate(race.event_date, undefined, locale) : t("tba_date")}
+          {race.canonical_name} -{" "}
+          {countryName(race.country_code, locale, race.country_name)} -{" "}
+          {race.event_date ? formatEventDate(race.event_date, undefined, locale) : t("tba_date")}
         </p>
       </div>
     </section>

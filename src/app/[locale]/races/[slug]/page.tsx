@@ -33,10 +33,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         (locale === "en"
           ? `${race.canonical_name} race info, schedule, registration.`
           : `${race.canonical_name} 대회 정보, 일정, 등록 안내.`),
+      alternates: {
+        canonical: `/races/${race.slug}`,
+      },
       openGraph: {
         title: race.canonical_name,
         description: race.description?.slice(0, 200) ?? undefined,
         type: "article",
+        url: `/races/${race.slug}`,
       },
     };
   } catch {
@@ -62,7 +66,7 @@ export default async function RaceDetailPage({ params }: PageProps) {
     getRelatedRaces(race).catch(() => []),
   ]);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://raceverse.app";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://race-verse.vercel.app";
   const url = `${siteUrl.replace(/\/$/, "")}/races/${race.slug}`;
   const location = [race.city, race.country_name ?? race.country_code].filter(Boolean).join(", ");
   const jsonLd = raceEventJsonLd(race, siteUrl);
@@ -77,8 +81,17 @@ export default async function RaceDetailPage({ params }: PageProps) {
 
       <RaceHero race={race} />
 
+      {/*
+       * Layout: registration card appears FIRST on mobile (right under the
+       * hero) so users can find it without scrolling. On lg+ it's pushed to
+       * the right column via order utilities.
+       */}
       <div className="container-wide grid gap-10 py-12 lg:grid-cols-[1fr_360px]">
-        <article className="space-y-12">
+        <aside className="order-1 lg:order-2 lg:sticky lg:top-20 lg:self-start">
+          <RegistrationCard race={race} />
+        </aside>
+
+        <article className="order-2 lg:order-1 space-y-12">
           {distances.length > 0 && (
             <section>
               <h2 className="font-display text-2xl tracking-tight">{t("distances")}</h2>
@@ -129,10 +142,6 @@ export default async function RaceDetailPage({ params }: PageProps) {
 
           <RelatedRaces races={related} />
         </article>
-
-        <aside className="lg:sticky lg:top-20 lg:self-start">
-          <RegistrationCard race={race} />
-        </aside>
       </div>
     </>
   );

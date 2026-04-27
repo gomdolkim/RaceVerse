@@ -4,7 +4,10 @@ import type { MetadataRoute } from "next";
 export const revalidate = 86400;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://raceverse.app").replace(/\/$/, "");
+  const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://race-verse.vercel.app").replace(
+    /\/$/,
+    "",
+  );
   const staticRoutes = [
     "",
     "/races",
