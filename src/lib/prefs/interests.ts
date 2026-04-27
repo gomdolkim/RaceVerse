@@ -30,9 +30,7 @@ export function parseInterests(rawValue: string | undefined): string[] | null {
 /** Client-side: read from `document.cookie`. */
 export function readInterestsFromDocument(): string[] | null {
   if (typeof document === "undefined") return null;
-  const match = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith(`${INTERESTS_COOKIE}=`));
+  const match = document.cookie.split("; ").find((row) => row.startsWith(`${INTERESTS_COOKIE}=`));
   if (!match) return null;
   return safeParse(match.split("=").slice(1).join("="));
 }

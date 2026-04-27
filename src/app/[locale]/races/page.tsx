@@ -2,6 +2,7 @@ import { EmptyState } from "@/components/feedback/EmptyState";
 import { FilterBar } from "@/components/filter/FilterBar";
 import { Pagination } from "@/components/filter/Pagination";
 import { RaceList } from "@/components/race/RaceList";
+import { redirect } from "@/lib/i18n/routing";
 import { FILTER_COOKIE, hasMeaningfulPrefs, parsePrefs } from "@/lib/prefs/filter-prefs";
 import { listCountries } from "@/lib/queries/countries";
 import { listRaces } from "@/lib/queries/races";
@@ -10,7 +11,6 @@ import { formatNumber } from "@/lib/utils";
 import { Search } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 
 export const revalidate = 600;
 
@@ -43,7 +43,9 @@ export default async function RacesPage({ params, searchParams }: PageProps) {
         dateTo: saved.dateTo,
       });
       const qs = params.toString();
-      if (qs) redirect(`/races?${qs}`);
+      // Use next-intl's locale-aware redirect so /en/races is preserved
+      // (avoids redirect loop where /races would re-trigger middleware).
+      if (qs) redirect({ href: `/races?${qs}`, locale });
     }
   }
 

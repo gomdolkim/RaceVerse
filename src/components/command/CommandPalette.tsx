@@ -99,11 +99,7 @@ export function CommandPalette() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="overflow-hidden p-0 max-w-xl">
         <Command shouldFilter={false}>
-          <CommandInput
-            placeholder={t("placeholder")}
-            value={q}
-            onValueChange={setQ}
-          />
+          <CommandInput placeholder={t("placeholder")} value={q} onValueChange={setQ} />
           <CommandList>
             {q.length >= 2 && hits.length === 0 && !loading && (
               <CommandEmpty>{t("no_results")}</CommandEmpty>

@@ -29,8 +29,7 @@ export function BottomNav() {
       <ul className="grid grid-cols-5">
         {ITEMS.map((item) => {
           const Icon = item.icon;
-          const active =
-            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           return (
             <li key={item.href}>
               <Link

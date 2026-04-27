@@ -40,6 +40,10 @@ export async function listRaces(filters: RaceFilters = {}): Promise<{
   // Use search_races RPC for combined filtering when distance filter is applied,
   // or when full-text search is needed. Otherwise direct view query is faster.
   if (filters.distanceMin !== undefined || filters.distanceMax !== undefined || filters.q) {
+    // Fetch limit+1 to detect "has more" without an extra count query —
+    // PostgREST RPC doesn't expose a SELECT COUNT, so this gives correct
+    // pagination behavior at the cost of one wasted row per page.
+    const probe = limit + 1;
     // biome-ignore lint/suspicious/noExplicitAny: untyped RPC, see lib/supabase/types
     const { data, error } = await supabase.rpc("search_races", {
       countries: filters.countries ?? null,
@@ -50,12 +54,17 @@ export async function listRaces(filters: RaceFilters = {}): Promise<{
       date_to: filters.dateTo ?? null,
       search_query: filters.q ?? null,
       only_with_registration: filters.onlyWithRegistration ?? false,
-      limit_count: limit,
+      limit_count: probe,
       offset_count: offset,
     } as any);
     if (error) throw error;
-    const rows = dropHidden((data ?? []) as RaceWithNextEdition[]);
-    return { data: rows, count: rows.length };
+    const allRows = dropHidden((data ?? []) as RaceWithNextEdition[]);
+    const hasMore = allRows.length > limit;
+    const rows = allRows.slice(0, limit);
+    // Approximate count: enough to keep pagination's "next" button correct.
+    // Real total isn't available without a separate count query.
+    const approxCount = offset + rows.length + (hasMore ? 1 : 0);
+    return { data: rows, count: approxCount };
   }
 
   let q = supabase

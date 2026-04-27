@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import Supercluster from "supercluster";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Button } from "@/components/ui/button";
-import { Crosshair, Layers } from "lucide-react";
+import { Crosshair } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 
 interface MapRace {
@@ -30,6 +31,7 @@ export function RaceMap({ onSelect }: { onSelect?: (race: MapRace) => void }) {
   const allRaces = useRef<Map<string, MapRace>>(new Map());
   const { resolvedTheme } = useTheme();
   const [loading, setLoading] = useState(true);
+  const t = useTranslations("map");
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -215,16 +217,13 @@ export function RaceMap({ onSelect }: { onSelect?: (race: MapRace) => void }) {
       {loading && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center bg-bg/40 backdrop-blur-sm">
           <span className="rounded-full bg-surface px-3 py-1 text-xs text-fg-muted">
-            지도 로딩 중...
+            {t("loading")}
           </span>
         </div>
       )}
       <div className="absolute left-3 top-3 flex flex-col gap-2">
-        <Button size="icon" variant="glass" onClick={locateMe} aria-label="내 위치">
+        <Button size="icon" variant="glass" onClick={locateMe} aria-label={t("locate_me")}>
           <Crosshair className="size-4" />
-        </Button>
-        <Button size="icon" variant="glass" aria-label="레이어">
-          <Layers className="size-4" />
         </Button>
       </div>
     </div>

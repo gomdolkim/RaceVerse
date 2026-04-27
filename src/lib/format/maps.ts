@@ -17,14 +17,20 @@ interface MapsTarget {
   country_code?: string | null;
 }
 
+/**
+ * (0, 0) is the well-known "null island" — almost always the result of a
+ * failed geocode rather than a real location, so we treat it as missing.
+ */
+function isValidCoord(lat: unknown, lon: unknown): lat is number {
+  if (typeof lat !== "number" || typeof lon !== "number") return false;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;
+  if (Math.abs(lat) < 0.0001 && Math.abs(lon) < 0.0001) return false;
+  return true;
+}
+
 export function googleMapsUrl(target: MapsTarget): string | null {
-  // Prefer exact coordinates when we have them.
-  if (
-    target.latitude != null &&
-    target.longitude != null &&
-    Number.isFinite(target.latitude) &&
-    Number.isFinite(target.longitude)
-  ) {
+  // Prefer exact coordinates when we have them (and they aren't null island).
+  if (isValidCoord(target.latitude, target.longitude)) {
     return `https://www.google.com/maps/search/?api=1&query=${target.latitude},${target.longitude}`;
   }
 
@@ -36,7 +42,7 @@ export function googleMapsUrl(target: MapsTarget): string | null {
     target.region,
     target.country_name ?? target.country_code,
   ]
-    .filter((p): p is string => Boolean(p && p.trim()))
+    .filter((p): p is string => Boolean(p?.trim()))
     .map((p) => p.trim());
 
   if (parts.length === 0) return null;

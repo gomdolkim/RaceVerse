@@ -36,9 +36,7 @@ export function LocaleSwitcher() {
             onClick={() => setOpen(false)}
             className={cn(
               "flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-              locale === l
-                ? "bg-accent/15 text-accent"
-                : "text-fg hover:bg-surface-raised",
+              locale === l ? "bg-accent/15 text-accent" : "text-fg hover:bg-surface-raised",
             )}
           >
             <span>{localeLabel[l]}</span>

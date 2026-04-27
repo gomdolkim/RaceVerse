@@ -8,13 +8,32 @@ export type SavedPrefs = Pick<
   "countries" | "types" | "onlyWithRegistration" | "dateFrom" | "dateTo"
 >;
 
+function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((s) => typeof s === "string");
+}
+
 function safeParse(raw: string | undefined): SavedPrefs | null {
   if (!raw) return null;
   try {
     const decoded = decodeURIComponent(raw);
-    const parsed = JSON.parse(decoded) as SavedPrefs;
+    const parsed = JSON.parse(decoded) as Record<string, unknown>;
     if (typeof parsed !== "object" || parsed === null) return null;
-    return parsed;
+
+    // Defensive shape validation — a tampered or out-of-version cookie
+    // shouldn't break callers. Drop fields that don't match expected shape.
+    const out: SavedPrefs = {};
+    if (parsed.countries !== undefined && isStringArray(parsed.countries)) {
+      out.countries = parsed.countries;
+    }
+    if (parsed.types !== undefined && isStringArray(parsed.types)) {
+      out.types = parsed.types as SavedPrefs["types"];
+    }
+    if (typeof parsed.onlyWithRegistration === "boolean") {
+      out.onlyWithRegistration = parsed.onlyWithRegistration;
+    }
+    if (typeof parsed.dateFrom === "string") out.dateFrom = parsed.dateFrom;
+    if (typeof parsed.dateTo === "string") out.dateTo = parsed.dateTo;
+    return out;
   } catch {
     return null;
   }

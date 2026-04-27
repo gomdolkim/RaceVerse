@@ -3,8 +3,13 @@ import { enUS, ko } from "date-fns/locale";
 
 type SupportedLocale = "ko" | "en";
 
+/** Tolerate locale codes like "en-US", "ko-KR" by checking the language prefix. */
+function normalizeLocale(locale: SupportedLocale | string | undefined): SupportedLocale {
+  return typeof locale === "string" && locale.toLowerCase().startsWith("en") ? "en" : "ko";
+}
+
 function getLocale(locale: SupportedLocale | string | undefined) {
-  return locale === "en" ? enUS : ko;
+  return normalizeLocale(locale) === "en" ? enUS : ko;
 }
 
 const PATTERNS: Record<SupportedLocale, { full: string; short: string }> = {
@@ -13,8 +18,11 @@ const PATTERNS: Record<SupportedLocale, { full: string; short: string }> = {
 };
 
 function patternFor(locale: SupportedLocale | string | undefined, kind: "full" | "short") {
-  const l = (locale === "en" ? "en" : "ko") as SupportedLocale;
-  return PATTERNS[l][kind];
+  return PATTERNS[normalizeLocale(locale)][kind];
+}
+
+function tbaLabel(locale: SupportedLocale | string | undefined): string {
+  return normalizeLocale(locale) === "en" ? "TBA" : "일정 미정";
 }
 
 export function formatEventDate(
@@ -22,7 +30,7 @@ export function formatEventDate(
   pattern?: string,
   locale: SupportedLocale | string = "ko",
 ): string {
-  if (!iso) return locale === "en" ? "TBA" : "일정 미정";
+  if (!iso) return tbaLabel(locale);
   try {
     return format(parseISO(iso), pattern ?? patternFor(locale, "full"), {
       locale: getLocale(locale),
@@ -37,14 +45,15 @@ export function formatDateRange(
   endIso: string | null | undefined,
   locale: SupportedLocale | string = "ko",
 ): string {
-  if (!startIso) return locale === "en" ? "TBA" : "일정 미정";
+  if (!startIso) return tbaLabel(locale);
   if (!endIso || endIso === startIso) return formatEventDate(startIso, undefined, locale);
   const start = parseISO(startIso);
   const end = parseISO(endIso);
   const lc = getLocale(locale);
+  const isEn = normalizeLocale(locale) === "en";
   if (start.getFullYear() === end.getFullYear()) {
     if (start.getMonth() === end.getMonth()) {
-      if (locale === "en") {
+      if (isEn) {
         return `${format(start, "MMM d", { locale: lc })}–${format(end, "d, yyyy", {
           locale: lc,
         })}`;
@@ -53,7 +62,7 @@ export function formatDateRange(
         locale: lc,
       })}`;
     }
-    if (locale === "en") {
+    if (isEn) {
       return `${format(start, "MMM d", { locale: lc })} – ${format(end, "MMM d, yyyy", {
         locale: lc,
       })}`;

@@ -107,9 +107,7 @@ export function CountryPicker({ available, selected, onToggle, onClear }: Props)
           <SheetHeader className="border-b border-border p-4">
             <SheetTitle className="font-display text-xl">{t("filter_country")}</SheetTitle>
             <SheetDescription className="text-xs">
-              {selected.length > 0
-                ? t("results_count", { count: selected.length })
-                : t("subtitle")}
+              {selected.length > 0 ? t("results_count", { count: selected.length }) : t("subtitle")}
             </SheetDescription>
             <SearchBox
               value={query}
@@ -157,11 +155,7 @@ export function CountryPicker({ available, selected, onToggle, onClear }: Props)
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent align="start" className="w-[340px] p-0">
         <div className="border-b border-border px-3 py-2">
-          <SearchBox
-            value={query}
-            onChange={setQuery}
-            placeholder={tNav("search_placeholder")}
-          />
+          <SearchBox value={query} onChange={setQuery} placeholder={tNav("search_placeholder")} />
         </div>
         <ScrollArea className="h-[360px]">
           <div className="p-1">{list}</div>
@@ -263,9 +257,7 @@ function PickerList({
                 // Mobile-friendly touch target: ≥48px height
                 "flex w-full items-center gap-3 rounded-lg px-3 py-3 text-base text-left transition-colors",
                 "active:bg-surface-overlay",
-                isSelected
-                  ? "bg-accent/15 text-accent"
-                  : "hover:bg-surface-raised",
+                isSelected ? "bg-accent/15 text-accent" : "hover:bg-surface-raised",
               )}
             >
               <CountryFlag code={c.country_code} size={24} />
@@ -278,9 +270,7 @@ function PickerList({
               <span
                 className={cn(
                   "flex size-5 items-center justify-center rounded-full border transition-colors",
-                  isSelected
-                    ? "border-accent bg-accent text-accent-fg"
-                    : "border-border",
+                  isSelected ? "border-accent bg-accent text-accent-fg" : "border-border",
                 )}
               >
                 {isSelected && <Check className="size-3" />}

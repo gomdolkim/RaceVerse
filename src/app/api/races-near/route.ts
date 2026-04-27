@@ -22,8 +22,9 @@ export async function GET(req: Request) {
   } as any);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  const HIDDEN = new Set(["unknown", "road_other"]);
   const rows = ((data ?? []) as RaceWithNextEdition[]).filter(
-    (r) => r.primary_type !== "unknown" && r.event_date != null,
+    (r) => !HIDDEN.has(r.primary_type) && r.event_date != null,
   );
   return NextResponse.json({ data: rows });
 }

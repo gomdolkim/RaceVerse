@@ -132,6 +132,10 @@ export function FilterBar({ availableCountries }: { availableCountries: CountryS
       else sp.delete("type");
       if (stagedOnlyReg) sp.set("reg", "1");
       else sp.delete("reg");
+      // Also apply the in-flight search query so user-typed input doesn't
+      // get silently dropped when they hit Apply on the mobile sheet.
+      if (q) sp.set("q", q);
+      else sp.delete("q");
     });
     setSheetOpen(false);
   };

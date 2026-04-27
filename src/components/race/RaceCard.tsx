@@ -3,8 +3,8 @@
 import { Badge } from "@/components/ui/badge";
 import { countryName } from "@/lib/format/country";
 import { dCountdown, shortDate } from "@/lib/format/date";
-import type { PrimaryType } from "@/lib/supabase/types";
 import { Link } from "@/lib/i18n/routing";
+import type { PrimaryType } from "@/lib/supabase/types";
 import type { RaceWithNextEdition } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";

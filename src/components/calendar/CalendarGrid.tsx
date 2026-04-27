@@ -246,15 +246,15 @@ export function CalendarGrid({
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <span
-                tabIndex={0}
+              <button
+                type="button"
                 className="inline-flex cursor-help items-center gap-1.5 rounded-full border border-dashed border-border px-2.5 py-1 text-xs text-fg-muted hover:border-accent/40 hover:text-fg transition-colors"
                 aria-label={t("filter_help")}
               >
                 <HelpCircle className="size-3.5" />
                 <span className="hidden md:inline">{t("filter_help_short")}</span>
                 <span className="inline md:hidden">?</span>
-              </span>
+              </button>
             </TooltipTrigger>
             <TooltipContent className="max-w-[260px] text-xs leading-relaxed">
               {t("filter_help")}

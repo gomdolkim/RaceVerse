@@ -1,6 +1,5 @@
-import { countryNameKo, flagEmoji } from "@/lib/format/country";
+import { countryName, flagEmoji } from "@/lib/format/country";
 import { formatEventDate } from "@/lib/format/date";
-import { PRIMARY_TYPE_LABEL_KO } from "@/lib/format/race";
 import { getRaceBySlug } from "@/lib/queries/races";
 import { ImageResponse } from "next/og";
 
@@ -8,14 +7,36 @@ export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default async function Image({ params }: { params: { slug: string } }) {
-  const race = await getRaceBySlug(params.slug).catch(() => null);
+const TYPE_LABEL: Record<string, { ko: string; en: string }> = {
+  road_marathon: { ko: "로드 마라톤", en: "Road marathon" },
+  road_other: { ko: "로드", en: "Road" },
+  trail: { ko: "트레일", en: "Trail" },
+  ultra: { ko: "울트라", en: "Ultra" },
+  mixed: { ko: "복합", en: "Mixed" },
+  virtual: { ko: "버추얼", en: "Virtual" },
+  unknown: { ko: "분류 미정", en: "Uncategorized" },
+};
+
+interface PageProps {
+  params: Promise<{ locale: string; slug: string }>;
+}
+
+export default async function Image({ params }: PageProps) {
+  // Next.js 15 — params is a Promise and must be awaited.
+  const { locale, slug } = await params;
+  const race = await getRaceBySlug(slug).catch(() => null);
+
+  const lang: "ko" | "en" = locale === "en" ? "en" : "ko";
+  const fallbackSubtitle =
+    lang === "en" ? "Marathons & trails worldwide" : "전 세계 마라톤 · 트레일";
   const title = race?.canonical_name ?? "RaceVerse";
   const subtitle = race
-    ? `${flagEmoji(race.country_code)} ${countryNameKo(race.country_code, race.country_name)}${race.city ? ` · ${race.city}` : ""}`
-    : "전 세계 마라톤 · 트레일";
-  const date = race?.event_date ? formatEventDate(race.event_date) : "";
-  const type = race ? PRIMARY_TYPE_LABEL_KO[race.primary_type] : "";
+    ? `${flagEmoji(race.country_code)} ${countryName(race.country_code, lang, race.country_name)}${
+        race.city ? ` · ${race.city}` : ""
+      }`
+    : fallbackSubtitle;
+  const date = race?.event_date ? formatEventDate(race.event_date, undefined, lang) : "";
+  const type = race ? (TYPE_LABEL[race.primary_type]?.[lang] ?? "") : "";
 
   return new ImageResponse(
     <div

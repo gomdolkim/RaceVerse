@@ -47,7 +47,8 @@ export default function MapClient() {
             <SheetDescription className="tabular">
               {selected && countryName(selected.country_code, locale)}
               {selected?.city && ` · ${selected.city}`}
-              {selected?.event_date && ` · ${formatEventDate(selected.event_date, undefined, locale)}`}
+              {selected?.event_date &&
+                ` · ${formatEventDate(selected.event_date, undefined, locale)}`}
             </SheetDescription>
           </SheetHeader>
           {selected && (

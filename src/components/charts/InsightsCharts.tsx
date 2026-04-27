@@ -1,7 +1,12 @@
 "use client";
 
 import { countryName } from "@/lib/format/country";
-import type { CountryAgg, DistanceBucket, MonthlyDistribution, TypeDistribution } from "@/lib/queries/stats";
+import type {
+  CountryAgg,
+  DistanceBucket,
+  MonthlyDistribution,
+  TypeDistribution,
+} from "@/lib/queries/stats";
 import type { PrimaryType } from "@/lib/supabase/types";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -95,13 +100,11 @@ export function InsightsCharts({ monthly, types, distances, topCountries }: Prop
                 interval="preserveStartEnd"
                 minTickGap={24}
               />
-              <YAxis
-                tick={TICK}
-                stroke={STROKE}
-                allowDecimals={false}
-                width={36}
+              <YAxis tick={TICK} stroke={STROKE} allowDecimals={false} width={36} />
+              <Tooltip
+                contentStyle={TOOLTIP_STYLE}
+                cursor={{ stroke: ACCENT, strokeOpacity: 0.3 }}
               />
-              <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: ACCENT, strokeOpacity: 0.3 }} />
               <Line
                 type="monotone"
                 dataKey="count"
@@ -155,7 +158,10 @@ export function InsightsCharts({ monthly, types, distances, topCountries }: Prop
               <CartesianGrid strokeDasharray="3 3" stroke="oklch(var(--border) / 0.5)" />
               <XAxis dataKey="name" tick={TICK} stroke={STROKE} />
               <YAxis tick={TICK} stroke={STROKE} allowDecimals={false} width={36} />
-              <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "oklch(var(--accent) / 0.08)" }} />
+              <Tooltip
+                contentStyle={TOOLTIP_STYLE}
+                cursor={{ fill: "oklch(var(--accent) / 0.08)" }}
+              />
               <Bar dataKey="count" fill={ACCENT} radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -166,10 +172,7 @@ export function InsightsCharts({ monthly, types, distances, topCountries }: Prop
         {countryData.length === 0 ? (
           <EmptyChart label={t("chart_no_data")} />
         ) : (
-          <ResponsiveContainer
-            width="100%"
-            height={Math.max(260, countryData.length * 24 + 40)}
-          >
+          <ResponsiveContainer width="100%" height={Math.max(260, countryData.length * 24 + 40)}>
             <BarChart
               data={countryData}
               layout="vertical"
@@ -189,7 +192,10 @@ export function InsightsCharts({ monthly, types, distances, topCountries }: Prop
                 stroke={STROKE}
                 interval={0}
               />
-              <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: "oklch(var(--accent) / 0.08)" }} />
+              <Tooltip
+                contentStyle={TOOLTIP_STYLE}
+                cursor={{ fill: "oklch(var(--accent) / 0.08)" }}
+              />
               <Bar dataKey="value" fill={ACCENT} radius={[0, 6, 6, 0]} />
             </BarChart>
           </ResponsiveContainer>

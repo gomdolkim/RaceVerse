@@ -88,7 +88,9 @@ export function RegistrationCard({ race }: { race: RaceWithNextEdition }) {
             </dl>
 
             <div className="flex flex-wrap gap-2">
-              {race.lottery_required && <Badge variant="warning">{t("registration_lottery")}</Badge>}
+              {race.lottery_required && (
+                <Badge variant="warning">{t("registration_lottery")}</Badge>
+              )}
               {race.qualifying_time_required && (
                 <Badge variant="warning">{t("registration_qualifying")}</Badge>
               )}

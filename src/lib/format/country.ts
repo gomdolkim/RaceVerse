@@ -107,7 +107,10 @@ const NAMES: Record<string, NameEntry> = {
   GP: { ko: "과들루프", en: "Guadeloupe" },
   GQ: { ko: "적도 기니", en: "Equatorial Guinea" },
   GR: { ko: "그리스", en: "Greece" },
-  GS: { ko: "사우스조지아 사우스샌드위치 제도", en: "South Georgia and the South Sandwich Islands" },
+  GS: {
+    ko: "사우스조지아 사우스샌드위치 제도",
+    en: "South Georgia and the South Sandwich Islands",
+  },
   GT: { ko: "과테말라", en: "Guatemala" },
   GU: { ko: "괌", en: "Guam" },
   GW: { ko: "기니비사우", en: "Guinea-Bissau" },

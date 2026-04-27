@@ -52,10 +52,10 @@ export default async function HomePage({ params }: PageProps) {
     safe(getTrailRaces(8), [] as Awaited<ReturnType<typeof getTrailRaces>>),
     safe(listCountries(), [] as Awaited<ReturnType<typeof listCountries>>),
     interests && interests.length > 0
-      ? safe(
-          listRaces({ countries: interests, dateFrom: today, limit: 12 }),
-          { data: [], count: 0 } as Awaited<ReturnType<typeof listRaces>>,
-        )
+      ? safe(listRaces({ countries: interests, dateFrom: today, limit: 12 }), {
+          data: [],
+          count: 0,
+        } as Awaited<ReturnType<typeof listRaces>>)
       : Promise.resolve({ data: [], count: 0 } as Awaited<ReturnType<typeof listRaces>>),
   ]);
 

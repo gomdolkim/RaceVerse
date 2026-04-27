@@ -69,9 +69,7 @@ export function DistanceCard({ d }: { d: RaceDistance }) {
           <div className="flex items-center gap-2">
             <Award className="size-3.5 text-accent" />
             <span className="text-fg-subtle">{t("itra_short")}</span>
-            <span className="ml-auto tabular text-fg">
-              {t("itra_value", { n: d.itra_points })}
-            </span>
+            <span className="ml-auto tabular text-fg">{t("itra_value", { n: d.itra_points })}</span>
           </div>
         )}
         {d.utmb_index !== null && (
