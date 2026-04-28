@@ -8,6 +8,7 @@ import { CommandPalette } from "@/components/command/CommandPalette";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Footer } from "@/components/layout/Footer";
 import { Nav } from "@/components/layout/Nav";
+import { InterestsModal } from "@/components/onboarding/InterestsModal";
 import { Providers } from "@/components/providers/Providers";
 import { routing } from "@/lib/i18n/routing";
 
@@ -38,6 +39,7 @@ export default async function LocaleLayout({
         <Footer />
         <BottomNav />
         <CommandPalette />
+        <InterestsModal />
         <Analytics />
         <SpeedInsights />
       </Providers>

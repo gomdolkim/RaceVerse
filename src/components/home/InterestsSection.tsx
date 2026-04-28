@@ -29,17 +29,18 @@ export function InterestsSection({ initialInterests, availableCountries, races }
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
-  const isFirstVisit = initialInterests === null;
+  // First-visit onboarding now happens in the global <InterestsModal />.
+  // The home section only handles two states for already-onboarded users:
+  // - editing → inline picker
+  // - has saved interests → display mode
   const savedInterests = initialInterests ?? [];
 
   const [selected, setSelected] = useState<string[]>(savedInterests);
   const [editing, setEditing] = useState(false);
 
-  // Keep showing the picker while the post-save router refresh is pending.
-  // Without this, savedInterests would briefly be the OLD value during the
-  // transition and the section would either flash empty (first save) or
-  // flash the old race list before re-rendering.
-  const showPicker = isFirstVisit || editing || pending;
+  // Keep showing the picker while the post-save router refresh is pending,
+  // so we don't flash the old race list between save and re-render.
+  const showPicker = editing || pending;
 
   /**
    * Sync interests → filter cookie so /races and /calendar pre-filter to
@@ -63,14 +64,6 @@ export function InterestsSection({ initialInterests, availableCountries, races }
     // Defer setEditing(false) — `pending` keeps the picker visible until the
     // server re-render completes, so the UI doesn't flash the old state.
     setEditing(false);
-  }
-
-  function skip() {
-    writeInterestsToDocument([]);
-    // Don't touch filter prefs on skip — user opted out, not opting "no countries".
-    startTransition(() => {
-      router.refresh();
-    });
   }
 
   function cancel() {
@@ -127,15 +120,9 @@ export function InterestsSection({ initialInterests, availableCountries, races }
               <Sparkles className="size-4" />
               {t("interests_save")}
             </Button>
-            {isFirstVisit ? (
-              <Button variant="ghost" onClick={skip} disabled={pending}>
-                {t("interests_skip")}
-              </Button>
-            ) : (
-              <Button variant="ghost" onClick={cancel}>
-                {t("interests_cancel")}
-              </Button>
-            )}
+            <Button variant="ghost" onClick={cancel} disabled={pending}>
+              {t("interests_cancel")}
+            </Button>
           </div>
         </div>
       </section>
